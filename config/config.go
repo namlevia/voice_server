@@ -29,7 +29,11 @@ type Config struct {
 	VAD         VADConfig `mapstructure:"vad"`
 	Recognition struct {
 		Enabled                     bool   `mapstructure:"enabled"`
+		ModelType                   string `mapstructure:"model_type"`
 		ModelPath                   string `mapstructure:"model_path"`
+		EncoderPath                 string `mapstructure:"encoder_path"`
+		DecoderPath                 string `mapstructure:"decoder_path"`
+		JoinerPath                  string `mapstructure:"joiner_path"`
 		TokensPath                  string `mapstructure:"tokens_path"`
 		Language                    string `mapstructure:"language"`
 		UseInverseTextNormalization bool   `mapstructure:"use_inverse_text_normalization"`
@@ -38,16 +42,16 @@ type Config struct {
 		Debug                       bool   `mapstructure:"debug"`
 	} `mapstructure:"recognition"`
 	Speaker struct {
-		Enabled          bool    `mapstructure:"enabled"`
-		ModelPath        string  `mapstructure:"model_path"`
-		NumThreads       int     `mapstructure:"num_threads"`
-		Provider         string  `mapstructure:"provider"`
-		Threshold        float32 `mapstructure:"threshold"`
-		DataDir          string  `mapstructure:"data_dir"`
-		SaveAudioOnFinish bool   `mapstructure:"save_audio_on_finish"`
-		AudioSaveDir     string  `mapstructure:"audio_save_dir"`
-		StorageType      string  `mapstructure:"storage_type"`
-		JSONStorage      struct {
+		Enabled           bool    `mapstructure:"enabled"`
+		ModelPath         string  `mapstructure:"model_path"`
+		NumThreads        int     `mapstructure:"num_threads"`
+		Provider          string  `mapstructure:"provider"`
+		Threshold         float32 `mapstructure:"threshold"`
+		DataDir           string  `mapstructure:"data_dir"`
+		SaveAudioOnFinish bool    `mapstructure:"save_audio_on_finish"`
+		AudioSaveDir      string  `mapstructure:"audio_save_dir"`
+		StorageType       string  `mapstructure:"storage_type"`
+		JSONStorage       struct {
 			FilePath string `mapstructure:"file_path"`
 		} `mapstructure:"json_storage"`
 		Qdrant struct {
@@ -114,42 +118,39 @@ type TenVADConf struct {
 }
 
 var GlobalConfig Config
+var configViper = viper.New()
 
 // InitConfig 初始化配置
 func InitConfig(configPath string) error {
-	// 设置配置文件名和路径
+	v := viper.New()
 	if configPath != "" {
-		viper.SetConfigFile(configPath)
+		v.SetConfigFile(configPath)
 	} else {
-		viper.SetConfigName("config")
-		viper.SetConfigType("json")
-		viper.AddConfigPath(".")
-		viper.AddConfigPath("./config")
-		viper.AddConfigPath("/etc/voice_server/")
+		v.SetConfigName("config")
+		v.SetConfigType("json")
+		v.AddConfigPath(".")
+		v.AddConfigPath("./config")
+		v.AddConfigPath("/etc/voice_server/")
 	}
 
-	// 设置环境变量前缀
-	viper.SetEnvPrefix("VAD_ASR")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
+	v.SetEnvPrefix("VAD_ASR")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// 配置文件未找到，使用默认值
 			fmt.Println("⚠️  Config file not found, using defaults")
 		} else {
-			// 配置文件找到但读取出错
 			return fmt.Errorf("error reading config file: %w", err)
 		}
 	} else {
-		fmt.Printf("✅ Using config file: %s\n", viper.ConfigFileUsed())
+		fmt.Printf("✅ Using config file: %s\n", v.ConfigFileUsed())
 	}
 
-	// 将配置解析到结构体
-	if err := viper.Unmarshal(&GlobalConfig); err != nil {
+	if err := v.Unmarshal(&GlobalConfig); err != nil {
 		return fmt.Errorf("error unmarshaling config: %w", err)
 	}
+	configViper = v
 
 	return nil
 }
@@ -166,7 +167,7 @@ func GetConfig() *Config {
 
 // GetViper 获取viper实例
 func GetViper() *viper.Viper {
-	return viper.GetViper()
+	return configViper
 }
 
 // WatchConfig 监听配置文件变化 (已废弃，使用HotReloadManager)
@@ -176,44 +177,44 @@ func WatchConfig(callback func()) {
 
 // SaveConfig 保存配置到文件
 func SaveConfig() error {
-	return viper.WriteConfig()
+	return configViper.WriteConfig()
 }
 
 // SaveConfigAs 保存配置到指定文件
 func SaveConfigAs(filename string) error {
-	return viper.WriteConfigAs(filename)
+	return configViper.WriteConfigAs(filename)
 }
 
 // SetConfigValue 设置配置值
 func SetConfigValue(key string, value interface{}) {
-	viper.Set(key, value)
+	configViper.Set(key, value)
 	// 重新解析到结构体
-	viper.Unmarshal(&GlobalConfig)
+	configViper.Unmarshal(&GlobalConfig)
 }
 
 // GetConfigValue 获取配置值
 func GetConfigValue(key string) interface{} {
-	return viper.Get(key)
+	return configViper.Get(key)
 }
 
 // GetString 获取字符串配置值
 func GetString(key string) string {
-	return viper.GetString(key)
+	return configViper.GetString(key)
 }
 
 // GetInt 获取整数配置值
 func GetInt(key string) int {
-	return viper.GetInt(key)
+	return configViper.GetInt(key)
 }
 
 // GetBool 获取布尔配置值
 func GetBool(key string) bool {
-	return viper.GetBool(key)
+	return configViper.GetBool(key)
 }
 
 // GetFloat64 获取浮点数配置值
 func GetFloat64(key string) float64 {
-	return viper.GetFloat64(key)
+	return configViper.GetFloat64(key)
 }
 
 // PrintConfig 打印当前配置

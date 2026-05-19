@@ -20,6 +20,7 @@ func NewRouter(deps *bootstrap.AppDependencies) *gin.Engine {
 	})
 	ginRouter.GET("/health", handlers.HealthHandler(deps))
 	ginRouter.GET("/stats", handlers.StatsHandler(deps))
+	ginRouter.POST("/transcribe", handlers.TranscribeHandler(deps))
 
 	// 静态文件服务
 	ginRouter.Static("/static", "./static")

@@ -23,6 +23,7 @@ func NewVADFactory() *VADFactory {
 	// 注册支持的VAD类型
 	factory.RegisterFactory(SILERO_TYPE, &SileroVADPoolFactory{})
 	factory.RegisterFactory(TEN_VAD_TYPE, &TenVADPoolFactory{})
+	factory.RegisterFactory(NOOP_VAD_TYPE, &NoopVADPoolFactory{})
 
 	return factory
 }
@@ -53,6 +54,8 @@ func (f *VADFactory) CreateVADPool() (VADPoolInterface, error) {
 		config, err = f.createSileroConfig()
 	case TEN_VAD_TYPE:
 		config, err = f.createTenVADConfig()
+	case NOOP_VAD_TYPE:
+		config = nil
 	default:
 		return nil, fmt.Errorf("unsupported VAD type: %s", vadType)
 	}

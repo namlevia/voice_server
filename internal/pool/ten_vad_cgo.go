@@ -1,3 +1,5 @@
+//go:build windows || (linux && amd64) || darwin
+
 package pool
 
 // #cgo windows,amd64 LDFLAGS: -L${SRCDIR}/../../lib/ten-vad/lib/Windows/x64 -lten_vad

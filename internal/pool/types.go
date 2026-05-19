@@ -67,6 +67,7 @@ var (
 )
 
 const (
-	TEN_VAD_TYPE = "ten_vad"
-	SILERO_TYPE  = "silero_vad"
+	TEN_VAD_TYPE  = "ten_vad"
+	SILERO_TYPE   = "silero_vad"
+	NOOP_VAD_TYPE = "none"
 )

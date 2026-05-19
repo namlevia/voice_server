@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"voice_server/config"
 	"voice_server/internal/config/hotreload"
@@ -32,7 +33,47 @@ func createRecognizer(cfg *config.Config) (*sherpa.OfflineRecognizer, error) {
 	c.FeatConfig.SampleRate = cfg.Audio.SampleRate
 	c.FeatConfig.FeatureDim = cfg.Audio.FeatureDim
 
-	c.ModelConfig.SenseVoice.Model = cfg.Recognition.ModelPath
+	modelType := strings.ToLower(strings.TrimSpace(cfg.Recognition.ModelType))
+	if modelType == "" {
+		modelType = "sense_voice"
+	}
+	logger.Infof("ASR recognition config: model_type=%s, encoder=%s, decoder=%s, joiner=%s, model=%s, tokens=%s",
+		modelType,
+		cfg.Recognition.EncoderPath,
+		cfg.Recognition.DecoderPath,
+		cfg.Recognition.JoinerPath,
+		cfg.Recognition.ModelPath,
+		cfg.Recognition.TokensPath,
+	)
+	switch modelType {
+	case "transducer", "rnnt", "zipformer_rnnt":
+		if err := requireFiles(map[string]string{
+			"encoder_path": cfg.Recognition.EncoderPath,
+			"decoder_path": cfg.Recognition.DecoderPath,
+			"joiner_path":  cfg.Recognition.JoinerPath,
+			"tokens_path":  cfg.Recognition.TokensPath,
+		}); err != nil {
+			return nil, err
+		}
+		c.ModelConfig.Transducer.Encoder = cfg.Recognition.EncoderPath
+		c.ModelConfig.Transducer.Decoder = cfg.Recognition.DecoderPath
+		c.ModelConfig.Transducer.Joiner = cfg.Recognition.JoinerPath
+		c.ModelConfig.ModelType = "transducer"
+	case "sense_voice", "sensevoice":
+		if err := requireFiles(map[string]string{
+			"model_path":  cfg.Recognition.ModelPath,
+			"tokens_path": cfg.Recognition.TokensPath,
+		}); err != nil {
+			return nil, err
+		}
+		c.ModelConfig.SenseVoice.Model = cfg.Recognition.ModelPath
+		c.ModelConfig.SenseVoice.Language = cfg.Recognition.Language
+		if cfg.Recognition.UseInverseTextNormalization {
+			c.ModelConfig.SenseVoice.UseInverseTextNormalization = 1
+		}
+	default:
+		return nil, fmt.Errorf("unsupported recognition model_type: %s", cfg.Recognition.ModelType)
+	}
 	c.ModelConfig.Tokens = cfg.Recognition.TokensPath
 	c.ModelConfig.NumThreads = cfg.Recognition.NumThreads
 	c.ModelConfig.Debug = 0
@@ -47,6 +88,22 @@ func createRecognizer(cfg *config.Config) (*sherpa.OfflineRecognizer, error) {
 	}
 
 	return recognizer, nil
+}
+
+func requireFiles(paths map[string]string) error {
+	for name, path := range paths {
+		if strings.TrimSpace(path) == "" {
+			return fmt.Errorf("ASR config missing %s", name)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("ASR config %s is not accessible: %s: %w", name, path, err)
+		}
+		if info.IsDir() || info.Size() == 0 {
+			return fmt.Errorf("ASR config %s is not a valid file: %s", name, path)
+		}
+	}
+	return nil
 }
 
 // registerHotReloadCallbacks 注册配置热加载回调

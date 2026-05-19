@@ -16,7 +16,7 @@
     "max_send_errors": 10
   },
   "vad": {
-    "provider": "ten_vad",
+    "provider": "none",
     "pool_size": 20,
     "threshold": 0.3,
     "silero_vad":{
@@ -34,12 +34,16 @@
       }
   },
   "recognition": {
-    "enabled": false,
-    "model_path": "models/asr/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/model.int8.onnx",
-    "tokens_path": "models/asr/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tokens.txt",
-    "language": "auto",
+    "enabled": true,
+    "model_type": "transducer",
+    "model_path": "",
+    "encoder_path": "models/asr/zipformer-vietnamese-30m/encoder-epoch-20-avg-10.onnx",
+    "decoder_path": "models/asr/zipformer-vietnamese-30m/decoder-epoch-20-avg-10.onnx",
+    "joiner_path": "models/asr/zipformer-vietnamese-30m/joiner-epoch-20-avg-10.onnx",
+    "tokens_path": "models/asr/zipformer-vietnamese-30m/config.json",
+    "language": "vi",
     "use_inverse_text_normalization": false,
-    "num_threads": 16,
+    "num_threads": 4,
     "provider": "cpu",
     "debug": false
   },
