@@ -17,13 +17,11 @@ import (
 
 func main() {
 
-	// 加载配置
 	if err := config.InitConfig("config.json"); err != nil {
-		logger.Errorf("Failed to load configuration:%v", err)
+		logger.Errorf("Tải cấu hình thất bại: %v", err)
 		os.Exit(1)
 	}
 
-	// 设置日志级别
 	logger.InitLoggerFromConfig(logger.LoggingConfig{
 		Level:      config.GlobalConfig.Logging.Level,
 		Format:     config.GlobalConfig.Logging.Format,
@@ -34,48 +32,44 @@ func main() {
 		MaxAge:     config.GlobalConfig.Logging.MaxAge,
 		Compress:   config.GlobalConfig.Logging.Compress,
 	})
-	logger.Infof("✅ Configuration loaded")
+	logger.Infof("✅ Đã tải cấu hình")
 	config.PrintConfig()
 
-	// 初始化所有依赖
 	deps, err := bootstrap.InitApp(&config.GlobalConfig)
 	if err != nil {
-		logger.Errorf("Failed to initialize app dependencies:%v", err)
+		logger.Errorf("Khởi tạo phụ thuộc ứng dụng thất bại: %v", err)
 		os.Exit(1)
 	}
 
-	// 统一注册所有路由
 	r := router.NewRouter(deps)
 
-	// 创建HTTP服务器
 	server := &http.Server{
 		Addr:        fmt.Sprintf("%s:%d", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port),
 		Handler:     deps.RateLimiter.Middleware(r),
 		ReadTimeout: time.Duration(config.GlobalConfig.Server.ReadTimeout) * time.Second,
 	}
 
-	// 优雅关闭
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-quit
-		logger.Infof("🛑 Shutting down server...")
+		logger.Infof("🛑 Đang dừng máy chủ...")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {
-			logger.Errorf("Server forced to shutdown:%v", err)
+			logger.Errorf("Máy chủ buộc phải dừng: %v", err)
 		}
-		logger.Infof("✅ Server shutdown complete")
+		logger.Infof("✅ Máy chủ đã dừng hoàn tất")
 	}()
 
-	logger.Infof("🌐 Listening on %s:%d", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
+	logger.Infof("🌐 Đang lắng nghe tại %s:%d", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
 	logger.Infof("🔗 WebSocket: ws://%s:%d/ws", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
-	logger.Infof("📊 Health check: http://%s:%d/health", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
-	logger.Infof("📈 Statistics: http://%s:%d/stats", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
-	logger.Infof("🧪 Test page: http://%s:%d/", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
+	logger.Infof("📊 Kiểm tra sức khỏe: http://%s:%d/health", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
+	logger.Infof("📈 Thống kê: http://%s:%d/stats", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
+	logger.Infof("🧪 Trang kiểm thử: http://%s:%d/", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Errorf("Server error:%v", err)
+		logger.Errorf("Lỗi máy chủ: %v", err)
 		os.Exit(1)
 	}
 }

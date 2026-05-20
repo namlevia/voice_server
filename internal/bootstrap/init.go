@@ -247,10 +247,10 @@ func InitApp(cfg *config.Config) (*AppDependencies, error) {
 				speakerManager = mgr
 				speakerHandler = speaker.NewHandler(speakerManager)
 			} else {
-				logger.Warnf("Failed to initialize speaker recognition module, continuing without it: %v", err)
+				logger.Warnf("Không khởi tạo được nhận diện người nói; ASR vẫn tiếp tục chạy không có speaker recognition: %v", err)
 			}
 		} else {
-			logger.Warnf("Speaker model file not found, speaker recognition disabled, model_path=%s", cfg.Speaker.ModelPath)
+			logger.Warnf("Không tìm thấy model nhận diện người nói; ASR vẫn tiếp tục chạy không có speaker recognition, model_path=%s", cfg.Speaker.ModelPath)
 		}
 	}
 
