@@ -26,7 +26,7 @@ type AppDependencies struct {
 	HotReloadMgr     *hotreload.HotReloadManager
 }
 
-// createRecognizer 用于初始化 sherpa 识别器
+// createRecognizer được sử dụng để khởi tạo trình nhận dạng sherpa
 func createRecognizer(cfg *config.Config) (*sherpa.OfflineRecognizer, error) {
 	c := sherpa.OfflineRecognizerConfig{}
 	c.FeatConfig.SampleRate = cfg.Audio.SampleRate
@@ -57,7 +57,7 @@ func createRecognizer(cfg *config.Config) (*sherpa.OfflineRecognizer, error) {
 	return recognizer, nil
 }
 
-// registerHotReloadCallbacks 注册配置热加载回调
+// registerHotReloadCallbacks đăng ký cấu hình các cuộc gọi lại tải lại nóng
 func registerHotReloadCallbacks(hotReloadMgr *hotreload.HotReloadManager) {
 	if hotReloadMgr == nil {
 		return
@@ -81,11 +81,11 @@ func registerHotReloadCallbacks(hotReloadMgr *hotreload.HotReloadManager) {
 	logger.Infof("✅ Hot reload callbacks registered")
 }
 
-// InitApp 初始化所有核心组件，返回依赖注入结构体
+// InitApp khởi tạo tất cả các thành phần cốt lõi và trả về cấu trúc chèn phần phụ thuộc
 func InitApp(cfg *config.Config) (*AppDependencies, error) {
 	logger.Infof("🔧 Initializing components...")
 
-	// 初始化配置热加载管理器
+	// Khởi tạo cấu hình trình quản lý tải lại nóng
 	logger.Infof("🔧 Initializing hot reload manager...")
 	hotReloadMgr, err := hotreload.NewHotReloadManager()
 	if err != nil {
@@ -96,10 +96,10 @@ func InitApp(cfg *config.Config) (*AppDependencies, error) {
 		logger.Warnf("Failed to start config file watching, continuing without hot reload: %v", err)
 	}
 
-	// 初始化全局识别器（仅在recognition启用时初始化）
+	// Khởi tạo trình nhận dạng chung (chỉ khởi tạo khi bật tính năng nhận dạng)
 	var globalRecognizer *sherpa.OfflineRecognizer
 	if cfg.Recognition.Enabled {
-		// 初始化全局识别器
+		// Khởi tạo trình nhận dạng toàn cầu
 		logger.Infof("🔧 Initializing global recognizer...")
 		globalRecognizer, err = createRecognizer(cfg)
 		if err != nil {
@@ -108,28 +108,28 @@ func InitApp(cfg *config.Config) (*AppDependencies, error) {
 		}
 	}
 
-	// 初始化VAD池（总是初始化，不依赖recognition.enabled）
+	// Khởi tạo nhóm VAD (luôn được khởi tạo, không dựa vào nhận dạng.enabled)
 	var vadPool pool.VADPoolInterface
 	logger.Infof("🔧 Initializing VAD pool...")
 	if cfg.VAD.Provider != "none" {
 		vadFactory := pool.NewVADFactory()
 
 		if config.GlobalConfig.VAD.Provider == pool.SILERO_TYPE {
-			// 检查VAD模型文件是否存在（仅对silero需要）
+			// Kiểm tra xem tệp mô hình VAD có tồn tại không (chỉ bắt buộc đối với silero)
 			if _, err := os.Stat(cfg.VAD.SileroVAD.ModelPath); os.IsNotExist(err) {
 				logger.Errorf("VAD model file not found, model_path=%s", cfg.VAD.SileroVAD.ModelPath)
 				return nil, fmt.Errorf("VAD model file not found: %s", cfg.VAD.SileroVAD.ModelPath)
 			}
 		}
 
-		// 使用工厂创建VAD池
+		// Tạo nhóm VAD bằng cách sử dụng nhà máy
 		vadPool, err = vadFactory.CreateVADPool()
 		if err != nil {
 			logger.Errorf("Failed to create VAD pool: %v", err)
 			return nil, fmt.Errorf("failed to create VAD pool: %v", err)
 		}
 
-		// 初始化VAD池
+		// Khởi tạo nhóm VAD
 		logger.Infof("🔧 Initializing VAD pool... pool_size=%d", cfg.VAD.PoolSize)
 		if err := vadPool.Initialize(); err != nil {
 			logger.Errorf("Failed to initialize VAD pool: %v", err)
@@ -139,14 +139,14 @@ func InitApp(cfg *config.Config) (*AppDependencies, error) {
 		logger.Infof("🔧 VAD is disabled (provider=none), skipping VAD pool initialization")
 	}
 
-	// 初始化会话管理器
+	// Khởi tạo trình quản lý phiên
 	logger.Infof("🔧 Initializing session manager...")
 	sessionManager := session.NewManager(globalRecognizer, vadPool)
 
-	// 注册配置热加载回调
+	// Đăng ký cấu hình gọi lại tải lại nóng
 	registerHotReloadCallbacks(hotReloadMgr)
 
-	// 初始化速率限制器
+	// Khởi tạo giới hạn tốc độ
 	logger.Infof("🔧 Initializing rate limiter... requests_per_second=%d, max_connections=%d", cfg.RateLimit.RequestsPerSecond, cfg.RateLimit.MaxConnections)
 	rateLimiter := middleware.NewRateLimiter(
 		cfg.RateLimit.Enabled,
@@ -155,7 +155,7 @@ func InitApp(cfg *config.Config) (*AppDependencies, error) {
 		cfg.RateLimit.MaxConnections,
 	)
 
-	// 初始化声纹识别模块
+	// Khởi tạo mô-đun nhận dạng giọng nói
 	var speakerManager *speaker.Manager
 	var speakerHandler *speaker.Handler
 	if cfg.Speaker.Enabled {
@@ -169,8 +169,8 @@ func InitApp(cfg *config.Config) (*AppDependencies, error) {
 				StorageType: cfg.Speaker.StorageType,
 			}
 			speakerConfig.JSONStorage.FilePath = cfg.Speaker.JSONStorage.FilePath
-			// 设置 Qdrant 向量数据库配置（优先从环境变量读取，其次从配置文件读取）
-			// 环境变量命名：QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION_NAME
+			// Đặt cấu hình cơ sở dữ liệu vectơ Qdrant (đọc từ các biến môi trường trước, sau đó đọc từ tệp cấu hình)
+			// Đặt tên biến môi trường: QDRANT_HOST, QDRANT_PORT, QDRANT_COLLECTION_NAME
 			if envHost := os.Getenv("QDRANT_HOST"); envHost != "" {
 				speakerConfig.Qdrant.Host = envHost
 				logger.Infof("Using Qdrant host from environment variable: %s", envHost)

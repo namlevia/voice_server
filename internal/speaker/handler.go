@@ -20,37 +20,37 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Handler 声纹识别HTTP处理器
+// Trình xử lý HTTP nhận dạng giọng nói
 type Handler struct {
 	manager *Manager
 }
 
-// NewHandler 创建新的处理器
+// NewHandler tạo một trình xử lý mới
 func NewHandler(manager *Manager) *Handler {
 	return &Handler{
 		manager: manager,
 	}
 }
 
-// getUIDFromRequest 从请求中提取 UID
-// 优先级：请求头 X-User-ID > 查询参数 uid > 表单字段 uid
+// getUIDFromRequest Trích xuất UID từ yêu cầu
+// Ưu tiên: Tiêu đề yêu cầu X-User-ID > Uid tham số truy vấn > uid trường biểu mẫu
 func getUIDFromRequest(c *gin.Context) string {
-	// 1. 从请求头获取
+	// 1. Lấy từ tiêu đề yêu cầu
 	if uid := c.GetHeader("X-User-ID"); uid != "" {
 		return uid
 	}
 
-	// 2. 从查询参数获取
+	// 2. Lấy tham số truy vấn
 	if uid := c.Query("uid"); uid != "" {
 		return uid
 	}
 
-	// 3. 从表单字段获取
+	// 3. Nhận từ các trường biểu mẫu
 	if uid := c.PostForm("uid"); uid != "" {
 		return uid
 	}
 
-	// 4. 从认证中间件获取（如果存在）
+	// 4. Nhận từ phần mềm trung gian xác thực (nếu có)
 	if uid, exists := c.Get("user_id"); exists {
 		if uidStr, ok := uid.(string); ok && uidStr != "" {
 			return uidStr
@@ -60,25 +60,25 @@ func getUIDFromRequest(c *gin.Context) string {
 	return ""
 }
 
-// getAgentIDFromRequest 从请求中提取 Agent ID
-// 优先级：请求头 X-Agent-ID > 查询参数 agent_id > 表单字段 agent_id
+// getAgentIDFromRequest Trích xuất ID tác nhân từ yêu cầu
+// Ưu tiên: tiêu đề yêu cầu X-Agent-ID > tham số truy vấn Agent_id > trường biểu mẫu Agent_id
 func getAgentIDFromRequest(c *gin.Context) string {
-	// 1. 从请求头获取
+	// 1. Lấy từ tiêu đề yêu cầu
 	if agentID := c.GetHeader("X-Agent-ID"); agentID != "" {
 		return agentID
 	}
 
-	// 2. 从查询参数获取
+	// 2. Lấy tham số truy vấn
 	if agentID := c.Query("agent_id"); agentID != "" {
 		return agentID
 	}
 
-	// 3. 从表单字段获取
+	// 3. Nhận từ các trường biểu mẫu
 	if agentID := c.PostForm("agent_id"); agentID != "" {
 		return agentID
 	}
 
-	// 4. 从认证中间件获取（如果存在）
+	// 4. Nhận từ phần mềm trung gian xác thực (nếu có)
 	if agentID, exists := c.Get("agent_id"); exists {
 		if agentIDStr, ok := agentID.(string); ok && agentIDStr != "" {
 			return agentIDStr
@@ -88,41 +88,41 @@ func getAgentIDFromRequest(c *gin.Context) string {
 	return ""
 }
 
-// RegisterRoutes 注册路由
+// RegisterRoutes đăng ký tuyến đường
 func (h *Handler) RegisterRoutes(router *gin.Engine) {
 	speakerGroup := router.Group("/api/v1/speaker")
 	{
-		// 声纹注册
+		// Đăng ký giọng nói
 		speakerGroup.POST("/register", h.RegisterSpeaker)
 
-		// 声纹识别
+		// Nhận dạng giọng nói
 		speakerGroup.POST("/identify", h.IdentifySpeaker)
 
-		// 声纹验证
+		// Xác minh giọng nói
 		speakerGroup.POST("/verify/:speaker_id", h.VerifySpeaker)
 
-		// 获取所有说话人
+		// Nhận tất cả các loa
 		speakerGroup.GET("/list", h.GetAllSpeakers)
 
-		// 删除说话人（支持两种方式）
+		// Xóa loa (hỗ trợ hai phương pháp)
 		speakerGroup.DELETE("", h.DeleteSpeaker)             // DELETE /api/v1/speaker?uuid=xxx
 		speakerGroup.DELETE("/:speaker_id", h.DeleteSpeaker) // DELETE /api/v1/speaker/:speaker_id
 
-		// 获取数据库统计信息
+		// Nhận số liệu thống kê cơ sở dữ liệu
 		speakerGroup.GET("/stats", h.GetStats)
 
-		//Base64 注册与识别接口
+		//Giao diện đăng ký và nhận dạng Base64
 		speakerGroup.POST("/register_base64", h.RegisterSpeakerBase64)
 		speakerGroup.POST("/identify_base64", h.IdentifySpeakerBase64)
 
-		// WebSocket 流式识别接口
+		// Giao diện nhận dạng phát trực tuyến WebSocket
 		speakerGroup.GET("/identify_ws", h.IdentifySpeakerWebSocket)
 	}
 }
 
-// RegisterSpeaker 注册声纹
+// RegisterSpeaker đăng ký giọng nói
 func (h *Handler) RegisterSpeaker(c *gin.Context) {
-	// 获取 UID
+	// Nhận UID
 	uid := getUIDFromRequest(c)
 	if uid == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -131,7 +131,7 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取 Agent ID（必填）
+	// Nhận ID đại lý (bắt buộc)
 	agentID := getAgentIDFromRequest(c)
 	if agentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -140,10 +140,10 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取表单数据
+	// Nhận dữ liệu biểu mẫu
 	speakerID := c.PostForm("speaker_id")
 	speakerName := c.PostForm("speaker_name")
-	uuid := c.PostForm("uuid") // 新增：UUID 参数
+	uuid := c.PostForm("uuid") // Mới: tham số UUID
 
 	if speakerID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -166,7 +166,7 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取音频文件
+	// Nhận tập tin âm thanh
 	file, header, err := c.Request.FormFile("audio")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -176,7 +176,7 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// 解析音频数据
+	// Phân tích dữ liệu âm thanh
 	audioData, sampleRate, err := h.parseAudioFile(file, header)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -185,7 +185,7 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 使用VAD过滤静音，保留前后100ms的静音
+	// Sử dụng VAD để lọc khoảng lặng và giữ lại khoảng im lặng 100ms trước và sau
 	filteredAudio, err := h.manager.FilterSilenceWithVADKeepEdges(audioData, sampleRate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -194,7 +194,7 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 注册声纹（使用过滤后的音频）
+	// Đăng ký giọng nói (sử dụng âm thanh được lọc)
 	err = h.manager.RegisterSpeaker(uid, agentID, speakerID, speakerName, uuid, filteredAudio, sampleRate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -203,7 +203,7 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 保存音频文件（异步保存，不阻塞响应）
+	// Lưu tệp âm thanh (lưu không đồng bộ, không chặn phản hồi)
 	go func() {
 		if err := saveRegisterAudioToWAV(filteredAudio, sampleRate, uid, agentID); err != nil {
 			logger.Warnf("Failed to save register audio file: %v", err)
@@ -222,27 +222,27 @@ func (h *Handler) RegisterSpeaker(c *gin.Context) {
 	})
 }
 
-// IdentifySpeaker 识别声纹
+// IdentitySpeaker xác định giọng nói
 func (h *Handler) IdentifySpeaker(c *gin.Context) {
-	// 获取 UID（可选）
+	// Nhận UID (tùy chọn)
 	uid := getUIDFromRequest(c)
 
-	// 获取 Agent ID（可选）
+	// Nhận ID đại lý (tùy chọn)
 	agentID := getAgentIDFromRequest(c)
 
-	// 获取 speaker_id 参数（可选）
+	// Nhận tham số loa_id (tùy chọn)
 	speakerID := c.Query("speaker_id")
 	if speakerID == "" {
 		speakerID = c.PostForm("speaker_id")
 	}
 
-	// 获取 speaker_name 参数（可选）
+	// Nhận tham số loa_name (tùy chọn)
 	speakerName := c.Query("speaker_name")
 	if speakerName == "" {
 		speakerName = c.PostForm("speaker_name")
 	}
 
-	// 获取音频文件
+	// Nhận tập tin âm thanh
 	file, header, err := c.Request.FormFile("audio")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -252,7 +252,7 @@ func (h *Handler) IdentifySpeaker(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// 解析音频数据
+	// Phân tích dữ liệu âm thanh
 	audioData, sampleRate, err := h.parseAudioFile(file, header)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -261,7 +261,7 @@ func (h *Handler) IdentifySpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取阈值参数（可选）
+	// Nhận thông số ngưỡng (tùy chọn)
 	var threshold float32
 	if thresholdStr := c.Query("threshold"); thresholdStr != "" {
 		if parsed, err := parseFloat32(thresholdStr); err == nil && parsed > 0 {
@@ -273,7 +273,7 @@ func (h *Handler) IdentifySpeaker(c *gin.Context) {
 		}
 	}
 
-	// 识别声纹（如果提供了阈值则使用，否则使用默认值）
+	// Nhận dạng giọng nói (sử dụng ngưỡng nếu được cung cấp, nếu không thì sử dụng mặc định)
 	var result *IdentifyResult
 	if threshold > 0 {
 		result, err = h.manager.IdentifySpeaker(uid, agentID, speakerID, speakerName, audioData, sampleRate, threshold)
@@ -290,9 +290,9 @@ func (h *Handler) IdentifySpeaker(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// VerifySpeaker 验证声纹
+// VerifySpeaker Xác minh giọng nói
 func (h *Handler) VerifySpeaker(c *gin.Context) {
-	// 获取 UID
+	// Nhận UID
 	uid := getUIDFromRequest(c)
 	if uid == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -301,7 +301,7 @@ func (h *Handler) VerifySpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取 Agent ID（可选）
+	// Nhận ID đại lý (tùy chọn)
 	agentID := getAgentIDFromRequest(c)
 
 	speakerID := c.Param("speaker_id")
@@ -312,7 +312,7 @@ func (h *Handler) VerifySpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取音频文件
+	// Nhận tập tin âm thanh
 	file, header, err := c.Request.FormFile("audio")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -322,7 +322,7 @@ func (h *Handler) VerifySpeaker(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// 解析音频数据
+	// Phân tích dữ liệu âm thanh
 	audioData, sampleRate, err := h.parseAudioFile(file, header)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -331,7 +331,7 @@ func (h *Handler) VerifySpeaker(c *gin.Context) {
 		return
 	}
 
-	// 验证声纹
+	// Xác minh giọng nói
 	result, err := h.manager.VerifySpeaker(uid, agentID, speakerID, audioData, sampleRate)
 	if err != nil {
 		if strings.Contains(err.Error(), "belongs to different uid") {
@@ -349,9 +349,9 @@ func (h *Handler) VerifySpeaker(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// GetAllSpeakers 获取所有说话人
+// GetAllSpeakers Nhận tất cả các loa
 func (h *Handler) GetAllSpeakers(c *gin.Context) {
-	// 获取 UID
+	// Nhận UID
 	uid := getUIDFromRequest(c)
 	if uid == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -360,7 +360,7 @@ func (h *Handler) GetAllSpeakers(c *gin.Context) {
 		return
 	}
 
-	// 获取 Agent ID（可选）
+	// Nhận ID đại lý (tùy chọn)
 	agentID := getAgentIDFromRequest(c)
 
 	speakers := h.manager.GetAllSpeakers(uid, agentID)
@@ -372,12 +372,12 @@ func (h *Handler) GetAllSpeakers(c *gin.Context) {
 	})
 }
 
-// DeleteSpeaker 删除说话人
-// 支持两种方式（需提供 uid，可选 agent_id）：
-// 1. 按 uuid 删除单条声纹：DELETE /api/v1/speaker?uuid=xxx（路径无 speaker_id）
-// 2. 按 speaker_id 删除整组声纹：DELETE /api/v1/speaker/:speaker_id
+// DeleteSpeakerXóa loa
+// Hai phương thức được hỗ trợ (yêu cầu uid, tùy chọn Agent_id):
+// 1. Xóa một dấu giọng nói bằng uuid: DELETE /api/v1/loa?uuid=xxx (đường dẫn không có loa_id)
+// 2. Xóa toàn bộ bộ voiceprint của loa_id: DELETE /api/v1/loa/:loa_id
 func (h *Handler) DeleteSpeaker(c *gin.Context) {
-	// 获取 UID
+	// Nhận UID
 	uid := getUIDFromRequest(c)
 	if uid == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -386,13 +386,13 @@ func (h *Handler) DeleteSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 获取 Agent ID（可选）
+	// Nhận ID đại lý (tùy chọn)
 	agentID := getAgentIDFromRequest(c)
 
-	// 优先使用 uuid 查询参数
+	// Thích sử dụng các tham số truy vấn uuid
 	uuid := c.Query("uuid")
 	if uuid != "" {
-		// 通过 UUID 删除
+		// Xóa bằng UUID
 		err := h.manager.DeleteSpeakerByUUID(uid, agentID, uuid)
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
@@ -422,7 +422,7 @@ func (h *Handler) DeleteSpeaker(c *gin.Context) {
 		return
 	}
 
-	// 通过路径参数 speaker_id 删除（speaker_id 就是组名称）
+	// Xóa thông số đường dẫn loa_id (loa_id là tên nhóm)
 	speakerID := c.Param("speaker_id")
 	if speakerID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -459,53 +459,53 @@ func (h *Handler) DeleteSpeaker(c *gin.Context) {
 	})
 }
 
-// GetStats 获取数据库统计信息
+// GetStats Lấy số liệu thống kê cơ sở dữ liệu
 func (h *Handler) GetStats(c *gin.Context) {
-	// UID 是可选的，如果不提供则返回全局统计
+	// UID là tùy chọn, nếu không cung cấp số liệu thống kê toàn cầu sẽ được trả về
 	uid := getUIDFromRequest(c)
-	// Agent ID 是可选的
+	// ID đại lý là tùy chọn
 	agentID := getAgentIDFromRequest(c)
 	stats := h.manager.GetStats(uid, agentID)
 	c.JSON(http.StatusOK, stats)
 }
 
-// parseAudioFile 解析音频文件
+// ParseAudioFile phân tích các tập tin âm thanh
 func (h *Handler) parseAudioFile(file multipart.File, header *multipart.FileHeader) ([]float32, int, error) {
-	// 检查文件类型
+	// Kiểm tra loại tập tin
 	filename := strings.ToLower(header.Filename)
 	if !strings.HasSuffix(filename, ".wav") {
 		return nil, 0, fmt.Errorf("only WAV files are supported")
 	}
 
-	// 读取WAV文件
+	// Đọc tập tin WAV
 	decoder := wav.NewDecoder(file)
 	if !decoder.IsValidFile() {
 		return nil, 0, fmt.Errorf("invalid WAV file")
 	}
 
-	// 获取音频格式信息
+	// Nhận thông tin định dạng âm thanh
 	sampleRate := int(decoder.SampleRate)
 	numChannels := int(decoder.NumChans)
 
-	// 只支持单声道或立体声
+	// Chỉ hỗ trợ mono hoặc stereo
 	if numChannels > 2 {
 		return nil, 0, fmt.Errorf("unsupported number of channels: %d", numChannels)
 	}
 
-	// 读取音频数据
+	// Đọc dữ liệu âm thanh
 	buffer, err := decoder.FullPCMBuffer()
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to decode audio: %v", err)
 	}
 
-	// 转换为float32格式
+	// Chuyển đổi sang định dạng float32
 	samples := make([]float32, len(buffer.Data))
 	for i, sample := range buffer.Data {
-		// 将int转换为float32，范围[-1.0, 1.0]
+		// Chuyển đổi int thành float32, phạm vi [-1.0, 1.0]
 		samples[i] = float32(sample) / config.GlobalConfig.Audio.NormalizeFactor
 	}
 
-	// 如果是立体声，转换为单声道（取平均值）
+	// Nếu là âm thanh nổi, hãy chuyển sang đơn âm (trung bình)
 	if numChannels == 2 {
 		monoSamples := make([]float32, len(samples)/2)
 		for i := 0; i < len(monoSamples); i++ {
@@ -517,14 +517,14 @@ func (h *Handler) parseAudioFile(file multipart.File, header *multipart.FileHead
 	return samples, sampleRate, nil
 }
 
-// 添加基于Base64的API接口（可选）
+// Thêm giao diện API dựa trên Base64 (tùy chọn)
 
-// RegisterSpeakerBase64 使用Base64编码的音频数据注册声纹
+// RegisterSpeakerBase64 Đăng ký giọng nói bằng dữ liệu âm thanh được mã hóa Base64
 func (h *Handler) RegisterSpeakerBase64(c *gin.Context) {
 	var req struct {
 		SpeakerID   string `json:"speaker_id" binding:"required"`
 		SpeakerName string `json:"speaker_name" binding:"required"`
-		AudioData   string `json:"audio_data" binding:"required"` // Base64编码的WAV数据
+		AudioData   string `json:"audio_data" binding:"required"` // Dữ liệu WAV được mã hóa Base64
 		SampleRate  int    `json:"sample_rate" binding:"required"`
 	}
 
@@ -535,18 +535,18 @@ func (h *Handler) RegisterSpeakerBase64(c *gin.Context) {
 		return
 	}
 
-	// 这里可以添加Base64解码和音频处理逻辑
-	// 为简化示例，暂时跳过具体实现
+	// Logic xử lý âm thanh và giải mã Base64 có thể được thêm vào đây
+	// Để đơn giản hóa ví dụ, việc triển khai cụ thể tạm thời bị bỏ qua
 
 	c.JSON(http.StatusNotImplemented, gin.H{
 		"error": "Base64 API not implemented yet",
 	})
 }
 
-// IdentifySpeakerBase64 使用Base64编码的音频数据识别声纹
+// Xác địnhSpeakerBase64 sử dụng dữ liệu âm thanh được mã hóa Base64 để xác định dấu giọng nói
 func (h *Handler) IdentifySpeakerBase64(c *gin.Context) {
 	var req struct {
-		AudioData  string `json:"audio_data" binding:"required"` // Base64编码的WAV数据
+		AudioData  string `json:"audio_data" binding:"required"` // Dữ liệu WAV được mã hóa Base64
 		SampleRate int    `json:"sample_rate" binding:"required"`
 	}
 
@@ -557,15 +557,15 @@ func (h *Handler) IdentifySpeakerBase64(c *gin.Context) {
 		return
 	}
 
-	// 这里可以添加Base64解码和音频处理逻辑
-	// 为简化示例，暂时跳过具体实现
+	// Logic xử lý âm thanh và giải mã Base64 có thể được thêm vào đây
+	// Để đơn giản hóa ví dụ, việc triển khai cụ thể tạm thời bị bỏ qua
 
 	c.JSON(http.StatusNotImplemented, gin.H{
 		"error": "Base64 API not implemented yet",
 	})
 }
 
-// WebSocketUpgrader WebSocket升级器
+// Trình nâng cấp WebSocket Trình nâng cấp WebSocket
 var WebSocketUpgrader = websocket.Upgrader{
 	CheckOrigin:       func(r *http.Request) bool { return true },
 	ReadBufferSize:    config.GlobalConfig.Server.WebSocket.ReadBufferSize,
@@ -573,15 +573,15 @@ var WebSocketUpgrader = websocket.Upgrader{
 	EnableCompression: config.GlobalConfig.Server.WebSocket.EnableCompression,
 }
 
-// IdentifySpeakerWebSocket WebSocket流式识别声纹
-// 支持连接复用和多轮次识别：
-// - 发送 {"action": "peek"} 获取当前轮次的中间识别结果（不结束当前轮次）
-// - 发送 {"action": "finish"} 完成当前轮次识别，返回结果后自动重置状态，准备下一轮
-// - 发送 {"action": "cancel"} 取消当前轮次识别，重置状态，准备下一轮
-// - 发送 {"action": "close"} 关闭连接
-// - 支持 WebSocket 协议层 ping/pong 心跳保活（自动回复 pong 并刷新超时计时器）
+// Xác địnhSpeakerWebSocket WebSocket nhận dạng giọng nói trực tuyến
+// Hỗ trợ tái sử dụng kết nối và nhận dạng nhiều vòng:
+// - Gửi {"action": "peek"} để nhận kết quả nhận dạng trung gian của vòng hiện tại (không kết thúc vòng hiện tại)
+// - Gửi {"action": "finish"} để hoàn thành vòng nhận dạng hiện tại và tự động reset trạng thái sau khi trả kết quả để chuẩn bị cho vòng tiếp theo
+// - Gửi {"action": "cancel"} để hủy vòng công nhận hiện tại, đặt lại trạng thái và chuẩn bị cho vòng tiếp theo
+// - Gửi {"action": "close"} để đóng kết nối
+// - Hỗ trợ duy trì nhịp tim ping/pong của lớp giao thức WebSocket (tự động trả lời pong và làm mới bộ đếm thời gian chờ)
 func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
-	// 升级为WebSocket连接
+	// Nâng cấp lên kết nối WebSocket
 	conn, err := WebSocketUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Errorf("WebSocket upgrade failed: %v", err)
@@ -591,7 +591,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 
 	logger.Infof("WebSocket connection established for speaker identification (multi-round enabled)")
 
-	// 获取采样率参数（默认16000）
+	// Lấy tham số tốc độ lấy mẫu (mặc định 16000)
 	sampleRate := 16000
 	if sr := c.Query("sample_rate"); sr != "" {
 		if srInt, err := parseInt(sr); err == nil {
@@ -604,7 +604,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 		logger.Debugf("WebSocket: No sample_rate parameter, using default: %d Hz", sampleRate)
 	}
 
-	// 获取阈值参数（可选）
+	// Nhận thông số ngưỡng (tùy chọn)
 	var threshold float32
 	if thresholdStr := c.Query("threshold"); thresholdStr != "" {
 		if parsed, err := parseFloat32(thresholdStr); err == nil && parsed > 0 {
@@ -615,19 +615,19 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 		}
 	}
 
-	// 获取 UID（从查询参数或请求头，可选）
+	// Nhận UID (từ tham số truy vấn hoặc tiêu đề yêu cầu, tùy chọn)
 	uid := getUIDFromRequest(c)
 
-	// 获取 Agent ID（可选）
+	// Nhận ID đại lý (tùy chọn)
 	agentID := getAgentIDFromRequest(c)
 
-	// 获取 speaker_id 参数（可选）
+	// Nhận tham số loa_id (tùy chọn)
 	speakerID := c.Query("speaker_id")
 
-	// 获取 speaker_name 参数（可选）
+	// Nhận tham số loa_name (tùy chọn)
 	speakerName := c.Query("speaker_name")
 
-	// 创建流式识别器的辅助函数
+	// Các chức năng trợ giúp để tạo trình nhận dạng phát trực tuyến
 	createIdentifier := func() *StreamingIdentifier {
 		logger.Debugf("WebSocket: Creating streaming identifier for uid: %s, agent_id: %s, speaker_id: %s, speaker_name: %s, sample rate: %d Hz, threshold: %.4f", uid, agentID, speakerID, speakerName, sampleRate, threshold)
 		if threshold > 0 {
@@ -636,7 +636,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 		return h.manager.NewStreamingIdentifier(uid, agentID, speakerID, speakerName, sampleRate)
 	}
 
-	// 创建初始流式识别器
+	// Tạo trình nhận dạng phát trực tuyến ban đầu
 	identifier := createIdentifier()
 	defer func() {
 		if identifier != nil {
@@ -644,24 +644,24 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 		}
 	}()
 
-	// 设置读取超时
+	// Đặt thời gian chờ đọc
 	wsConfig := config.GlobalConfig.Server.WebSocket
 	if wsConfig.ReadTimeout > 0 {
 		conn.SetReadDeadline(time.Now().Add(time.Duration(wsConfig.ReadTimeout) * time.Second))
 		logger.Debugf("WebSocket: Set read timeout: %d seconds", wsConfig.ReadTimeout)
 	}
 
-	// 设置 WebSocket 协议层 ping handler，收到 ping 时刷新超时并自动回复 pong
+	// Đặt trình xử lý ping lớp giao thức WebSocket để làm mới thời gian chờ và tự động trả lời pong khi nhận được ping
 	conn.SetPingHandler(func(appData string) error {
 		logger.Debugf("WebSocket: Received protocol ping, refreshing timeout and sending pong")
 		if wsConfig.ReadTimeout > 0 {
 			conn.SetReadDeadline(time.Now().Add(time.Duration(wsConfig.ReadTimeout) * time.Second))
 		}
-		// 回复 pong（使用相同的 appData）
+		// Trả lời pong (sử dụng cùng một appData)
 		return conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second))
 	})
 
-	// 发送连接确认消息
+	// Gửi tin nhắn xác nhận kết nối
 	connectionMsg := map[string]interface{}{
 		"type":        "connection",
 		"message":     "WebSocket connected, ready for audio (multi-round enabled)",
@@ -673,21 +673,21 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 	}
 	logger.Debugf("WebSocket: Sent connection confirmation message: %+v", connectionMsg)
 
-	// 音频缓冲区（用于保存音频文件）
+	// Bộ đệm âm thanh (được sử dụng để lưu tệp âm thanh)
 	var audioBuffer []float32
 	saveAudioEnabled := config.GlobalConfig.Speaker.SaveAudioOnFinish
 	useThreshold := h.manager.threshold
 	if threshold > 0 {
 		useThreshold = threshold
 	}
-	// peek 防抖：默认每 150ms 最多处理一次，避免高频 peek 压垮服务
+	// Chống rung nhìn trộm: Theo mặc định, quá trình xử lý được thực hiện tối đa 150 mili giây một lần để tránh việc nhìn lén tần số cao làm dịch vụ bị choáng ngợp.
 	const minPeekInterval = 150 * time.Millisecond
 	var lastPeekAt time.Time
 
-	// 读取消息
+	// đọc tin nhắn
 	totalAudioSamples := 0
 	audioChunkCount := 0
-	roundCount := 0 // 识别轮次计数
+	roundCount := 0 // Xác định số vòng
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
@@ -701,12 +701,12 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 
 		logger.Debugf("WebSocket: Received message, type=%d, size=%d bytes", messageType, len(message))
 
-		// 刷新读超时
+		// làm mới thời gian chờ đọc
 		if wsConfig.ReadTimeout > 0 {
 			conn.SetReadDeadline(time.Now().Add(time.Duration(wsConfig.ReadTimeout) * time.Second))
 		}
 
-		// 检查消息大小
+		// Kiểm tra kích thước tin nhắn
 		if wsConfig.MaxMessageSize > 0 && len(message) > wsConfig.MaxMessageSize {
 			logger.Warnf("WebSocket: Message too large: %d bytes (max: %d)", len(message), wsConfig.MaxMessageSize)
 			conn.WriteJSON(map[string]interface{}{
@@ -716,7 +716,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 			continue
 		}
 
-		// 处理文本消息（控制消息）
+		// Xử lý tin nhắn văn bản (điều khiển tin nhắn)
 		if messageType == websocket.TextMessage {
 			logger.Debugf("WebSocket: Received text message: %s", string(message))
 			var controlMsg map[string]interface{}
@@ -731,7 +731,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 				logger.Debugf("WebSocket: Control action: %s", action)
 				switch action {
 				case "peek":
-					// 中间结果查询：不结束当前轮次，不重置流式状态
+					// Truy vấn kết quả trung gian: không kết thúc vòng hiện tại và không đặt lại trạng thái phát trực tuyến
 					requestID, _ := controlMsg["request_id"].(string)
 					now := time.Now()
 					if !lastPeekAt.IsZero() && now.Sub(lastPeekAt) < minPeekInterval {
@@ -765,7 +765,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 						resp["request_id"] = requestID
 					}
 
-					// 没有音频时直接返回空结果，避免创建识别器
+					// Khi không có âm thanh, hãy trả về trực tiếp kết quả trống để tránh tạo trình nhận dạng.
 					if len(audioBuffer) == 0 {
 						resp["result"] = &IdentifyResult{
 							Identified:  false,
@@ -781,7 +781,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 						continue
 					}
 
-					// 复制当前音频快照，避免后续轮次复用时被覆盖
+					// Sao chép ảnh chụp nhanh âm thanh hiện tại để tránh bị ghi đè khi sử dụng lại ở các vòng tiếp theo
 					audioSnapshot := make([]float32, len(audioBuffer))
 					copy(audioSnapshot, audioBuffer)
 
@@ -814,7 +814,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 					}
 
 				case "finish":
-					// 完成当前轮次识别
+					// Hoàn thành vòng nhận dạng hiện tại
 					roundCount++
 					logger.Debugf("WebSocket: Finish action received (round %d), total audio samples: %d, chunks: %d", roundCount, totalAudioSamples, audioChunkCount)
 					logger.Debugf("WebSocket: Calling FinishAndIdentify()...")
@@ -826,7 +826,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 							"message": err.Error(),
 							"round":   roundCount,
 						})
-						// 重置状态，准备下一轮（即使出错也允许继续）
+						// Đặt lại trạng thái để chuẩn bị cho vòng tiếp theo (cho phép tiếp tục ngay cả khi xảy ra lỗi)
 						identifier.Close()
 						identifier = createIdentifier()
 						audioBuffer = nil
@@ -835,14 +835,14 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 						continue
 					}
 
-					// 如果启用了保存音频，保存音频文件
+					// Nếu bật tính năng lưu âm thanh, hãy lưu tệp âm thanh
 					if saveAudioEnabled && len(audioBuffer) > 0 {
-						// 复制音频数据，避免在异步执行时数据被修改
+						// Sao chép dữ liệu âm thanh để tránh dữ liệu bị sửa đổi trong quá trình thực thi không đồng bộ
 						audioDataCopy := make([]float32, len(audioBuffer))
 						copy(audioDataCopy, audioBuffer)
 						currentRound := roundCount
 						go func() {
-							// 异步保存，不阻塞响应
+							// Lưu không đồng bộ, không có phản hồi chặn
 							if err := saveAudioToWAV(audioDataCopy, sampleRate, uid, agentID); err != nil {
 								logger.Warnf("WebSocket: Failed to save audio file (round %d): %v", currentRound, err)
 							} else {
@@ -851,7 +851,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 						}()
 					}
 
-					// 发送识别结果
+					// Gửi kết quả nhận dạng
 					conn.WriteJSON(map[string]interface{}{
 						"type":   "result",
 						"result": result,
@@ -859,14 +859,14 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 					})
 					logger.Infof("WebSocket: Sent identification result to client (round %d)", roundCount)
 
-					// 重置状态，准备下一轮识别
+					// Đặt lại trạng thái và chuẩn bị cho vòng công nhận tiếp theo
 					identifier.Close()
 					identifier = createIdentifier()
 					audioBuffer = nil
 					totalAudioSamples = 0
 					audioChunkCount = 0
 
-					// 发送就绪消息，通知客户端可以开始下一轮
+					// Gửi tin nhắn sẵn sàng để thông báo cho khách hàng rằng vòng tiếp theo có thể bắt đầu
 					conn.WriteJSON(map[string]interface{}{
 						"type":    "ready",
 						"message": "Ready for next round",
@@ -875,7 +875,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 					logger.Debugf("WebSocket: Reset state, ready for round %d", roundCount+1)
 
 				case "cancel":
-					// 取消当前轮次识别，重置状态
+					// Hủy trạng thái nhận dạng vòng hiện tại và đặt lại
 					logger.Infof("WebSocket: Cancel action received (round %d), resetting state", roundCount+1)
 					identifier.Close()
 					identifier = createIdentifier()
@@ -890,7 +890,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 					})
 
 				case "close":
-					// 显式关闭连接
+					// Rõ ràng đóng kết nối
 					logger.Infof("WebSocket: Close action received, closing connection after %d rounds", roundCount)
 					conn.WriteJSON(map[string]interface{}{
 						"type":         "closing",
@@ -908,12 +908,12 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 			continue
 		}
 
-		// 处理二进制消息（音频数据）
+		// Xử lý tin nhắn nhị phân (dữ liệu âm thanh)
 		if messageType == websocket.BinaryMessage {
 			logger.Debugf("WebSocket: Received binary message: %d bytes", len(message))
 
-			// 将字节数据转换为float32数组
-			// 假设输入是float32的二进制数据（小端序）
+			// Chuyển đổi dữ liệu byte thành mảng float32
+			// Giả sử rằng đầu vào là dữ liệu nhị phân float32 (endian nhỏ)
 			if len(message)%4 != 0 {
 				logger.Warnf("WebSocket: Invalid audio data length: %d bytes (not divisible by 4)", len(message))
 				conn.WriteJSON(map[string]interface{}{
@@ -937,7 +937,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 				audioData[i] = math.Float32frombits(bits)
 			}
 
-			// 检查音频数据范围
+			// Kiểm tra phạm vi dữ liệu âm thanh
 			var minVal, maxVal float32 = audioData[0], audioData[0]
 			for _, v := range audioData {
 				if v < minVal {
@@ -950,7 +950,7 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 			logger.Debugf("WebSocket: Audio chunk #%d: samples=%d, duration=%.2fms, range=[%.4f, %.4f]",
 				audioChunkCount+1, sampleCount, float64(sampleCount)/float64(sampleRate)*1000, minVal, maxVal)
 
-			// 接收音频数据块
+			// Nhận khối dữ liệu âm thanh
 			if err := identifier.AcceptAudio(audioData); err != nil {
 				logger.Errorf("WebSocket: Failed to accept audio chunk #%d: %v", audioChunkCount+1, err)
 				conn.WriteJSON(map[string]interface{}{
@@ -960,19 +960,19 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 				return
 			}
 
-			// 始终保留当前轮次音频，用于 peek 中间识别与可选的落盘
+			// Luôn giữ lại âm thanh tròn hiện tại để nhận dạng âm thanh giữa và vị trí tùy chọn
 			audioBuffer = append(audioBuffer, audioData...)
 
 			totalAudioSamples += sampleCount
 			audioChunkCount++
 
-			// 每10个块打印一次统计信息
+			// In số liệu thống kê cứ sau 10 khối
 			if audioChunkCount%10 == 0 {
 				logger.Debugf("WebSocket: Audio progress - chunks: %d, total samples: %d, total duration: %.2fs",
 					audioChunkCount, totalAudioSamples, float64(totalAudioSamples)/float64(sampleRate))
 			}
 
-			// 发送确认消息（可选）
+			// Gửi tin nhắn xác nhận (tùy chọn)
 			ackMsg := map[string]interface{}{
 				"type":        "audio_received",
 				"samples":     len(audioData),
@@ -990,42 +990,42 @@ func (h *Handler) IdentifySpeakerWebSocket(c *gin.Context) {
 		roundCount, audioChunkCount, totalAudioSamples, float64(totalAudioSamples)/float64(sampleRate))
 }
 
-// parseInt 解析整数（辅助函数）
+// ParseInt phân tích số nguyên (hàm trợ giúp)
 func parseInt(s string) (int, error) {
 	var result int
 	_, err := fmt.Sscanf(s, "%d", &result)
 	return result, err
 }
 
-// parseFloat32 解析浮点数（辅助函数）
+// ParsFloat32 phân tích số dấu phẩy động (hàm phụ trợ)
 func parseFloat32(s string) (float32, error) {
 	var result float32
 	_, err := fmt.Sscanf(s, "%f", &result)
 	return result, err
 }
 
-// saveAudioToWAV 将音频数据保存为 WAV 文件
+// saveAudioToWAV lưu dữ liệu âm thanh dưới dạng tệp WAV
 func saveAudioToWAV(audioData []float32, sampleRate int, uid, agentID string) error {
 	if len(audioData) == 0 {
 		return fmt.Errorf("audio data is empty")
 	}
 
-	// 确定保存目录
+	// Xác định thư mục lưu
 	saveDir := config.GlobalConfig.Speaker.AudioSaveDir
 	if saveDir == "" {
-		// 如果未指定，使用 data_dir
+		// Nếu không được chỉ định, data_dir sẽ được sử dụng
 		saveDir = config.GlobalConfig.Speaker.DataDir
 	}
 	if saveDir == "" {
 		saveDir = "data/speaker"
 	}
 
-	// 创建保存目录（如果不存在）
+	// Tạo thư mục lưu nếu nó không tồn tại
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
 		return fmt.Errorf("failed to create save directory: %w", err)
 	}
 
-	// 生成文件名：时间戳_uid_agentid.wav
+	// Tạo tên tệp: timestamp_uid_agentid.wav
 	timestamp := time.Now().Format("20060102_150405")
 	var filename string
 	if uid != "" && agentID != "" {
@@ -1038,57 +1038,57 @@ func saveAudioToWAV(audioData []float32, sampleRate int, uid, agentID string) er
 		filename = fmt.Sprintf("%s.wav", timestamp)
 	}
 
-	// 清理文件名中的非法字符
+	// Làm sạch các ký tự không hợp lệ trong tên tệp
 	filename = strings.ReplaceAll(filename, "/", "_")
 	filename = strings.ReplaceAll(filename, "\\", "_")
 	filename = strings.ReplaceAll(filename, ":", "_")
 
 	filePath := filepath.Join(saveDir, filename)
 
-	// 创建文件
+	// Tạo tập tin
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
 
-	// 将 float32 转换为 int16
-	// float32 范围是 [-1.0, 1.0]，需要转换为 int16 范围 [-32768, 32767]
+	// Chuyển đổi float32 sang int16
+	// Phạm vi của float32 là [-1.0, 1.0] và cần được chuyển đổi thành phạm vi int16 [-32768, 32767]
 	int16Data := make([]int, len(audioData))
 	normalizeFactor := config.GlobalConfig.Audio.NormalizeFactor
 	for i, sample := range audioData {
-		// 限制范围到 [-1.0, 1.0]
+		// Phạm vi giới hạn ở [-1.0, 1.0]
 		if sample > 1.0 {
 			sample = 1.0
 		} else if sample < -1.0 {
 			sample = -1.0
 		}
-		// 转换为 int16
+		// Chuyển đổi sang int16
 		int16Data[i] = int(sample * normalizeFactor)
 	}
 
-	// 创建音频格式
+	// Tạo định dạng âm thanh
 	format := &audio.Format{
-		NumChannels: 1, // 单声道
+		NumChannels: 1, // bệnh tăng bạch cầu đơn nhân
 		SampleRate:  sampleRate,
 	}
 
-	// 创建 WAV 编码器
+	// Tạo bộ mã hóa WAV
 	encoder := wav.NewEncoder(file, format.SampleRate, 16, format.NumChannels, 1)
 
-	// 创建音频缓冲区
+	// Tạo bộ đệm âm thanh
 	buf := &audio.IntBuffer{
 		Format:         format,
 		SourceBitDepth: 16,
 		Data:           int16Data,
 	}
 
-	// 写入音频数据
+	// Ghi dữ liệu âm thanh
 	if err := encoder.Write(buf); err != nil {
 		return fmt.Errorf("failed to write audio data: %w", err)
 	}
 
-	// 关闭编码器
+	// Tắt bộ mã hóa
 	if err := encoder.Close(); err != nil {
 		return fmt.Errorf("failed to close encoder: %w", err)
 	}
@@ -1097,28 +1097,28 @@ func saveAudioToWAV(audioData []float32, sampleRate int, uid, agentID string) er
 	return nil
 }
 
-// saveRegisterAudioToWAV 将注册音频数据保存为 WAV 文件（文件名加前缀 "register_"）
+// saveRegisterAudioToWAV lưu dữ liệu âm thanh đã đăng ký dưới dạng tệp WAV (tên tệp có tiền tố là "register_")
 func saveRegisterAudioToWAV(audioData []float32, sampleRate int, uid, agentID string) error {
 	if len(audioData) == 0 {
 		return fmt.Errorf("audio data is empty")
 	}
 
-	// 确定保存目录
+	// Xác định thư mục lưu
 	saveDir := config.GlobalConfig.Speaker.AudioSaveDir
 	if saveDir == "" {
-		// 如果未指定，使用 data_dir
+		// Nếu không được chỉ định, data_dir sẽ được sử dụng
 		saveDir = config.GlobalConfig.Speaker.DataDir
 	}
 	if saveDir == "" {
 		saveDir = "data/speaker"
 	}
 
-	// 创建保存目录（如果不存在）
+	// Tạo thư mục lưu nếu nó không tồn tại
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
 		return fmt.Errorf("failed to create save directory: %w", err)
 	}
 
-	// 生成文件名：register_时间戳_uid_agentid.wav
+	// Tên tệp đã tạo: register_timestamp_uid_agentid.wav
 	timestamp := time.Now().Format("20060102_150405")
 	var filename string
 	if uid != "" && agentID != "" {
@@ -1131,57 +1131,57 @@ func saveRegisterAudioToWAV(audioData []float32, sampleRate int, uid, agentID st
 		filename = fmt.Sprintf("register_%s.wav", timestamp)
 	}
 
-	// 清理文件名中的非法字符
+	// Làm sạch các ký tự không hợp lệ trong tên tệp
 	filename = strings.ReplaceAll(filename, "/", "_")
 	filename = strings.ReplaceAll(filename, "\\", "_")
 	filename = strings.ReplaceAll(filename, ":", "_")
 
 	filePath := filepath.Join(saveDir, filename)
 
-	// 创建文件
+	// Tạo tập tin
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
 
-	// 将 float32 转换为 int16
-	// float32 范围是 [-1.0, 1.0]，需要转换为 int16 范围 [-32768, 32767]
+	// Chuyển đổi float32 sang int16
+	// Phạm vi của float32 là [-1.0, 1.0] và cần được chuyển đổi thành phạm vi int16 [-32768, 32767]
 	int16Data := make([]int, len(audioData))
 	normalizeFactor := config.GlobalConfig.Audio.NormalizeFactor
 	for i, sample := range audioData {
-		// 限制范围到 [-1.0, 1.0]
+		// Phạm vi giới hạn ở [-1.0, 1.0]
 		if sample > 1.0 {
 			sample = 1.0
 		} else if sample < -1.0 {
 			sample = -1.0
 		}
-		// 转换为 int16
+		// Chuyển đổi sang int16
 		int16Data[i] = int(sample * normalizeFactor)
 	}
 
-	// 创建音频格式
+	// Tạo định dạng âm thanh
 	format := &audio.Format{
-		NumChannels: 1, // 单声道
+		NumChannels: 1, // bệnh tăng bạch cầu đơn nhân
 		SampleRate:  sampleRate,
 	}
 
-	// 创建 WAV 编码器
+	// Tạo bộ mã hóa WAV
 	encoder := wav.NewEncoder(file, format.SampleRate, 16, format.NumChannels, 1)
 
-	// 创建音频缓冲区
+	// Tạo bộ đệm âm thanh
 	buf := &audio.IntBuffer{
 		Format:         format,
 		SourceBitDepth: 16,
 		Data:           int16Data,
 	}
 
-	// 写入音频数据
+	// Ghi dữ liệu âm thanh
 	if err := encoder.Write(buf); err != nil {
 		return fmt.Errorf("failed to write audio data: %w", err)
 	}
 
-	// 关闭编码器
+	// Tắt bộ mã hóa
 	if err := encoder.Close(); err != nil {
 		return fmt.Errorf("failed to close encoder: %w", err)
 	}

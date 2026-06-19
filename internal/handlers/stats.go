@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// StatsHandler 统计信息接口（依赖注入）
+// Giao diện thống kê StatsHandler (tiêm phụ thuộc)
 func StatsHandler(deps *bootstrap.AppDependencies) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		stats := map[string]interface{}{

@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Upgrader 用于升级 WebSocket 连接
+// Trình nâng cấp được sử dụng để nâng cấp các kết nối WebSocket
 var Upgrader = websocket.Upgrader{
 	CheckOrigin:       func(r *http.Request) bool { return true },
 	ReadBufferSize:    config.GlobalConfig.Server.WebSocket.ReadBufferSize,
@@ -22,15 +22,15 @@ var Upgrader = websocket.Upgrader{
 	EnableCompression: config.GlobalConfig.Server.WebSocket.EnableCompression,
 }
 
-// GenerateSessionID 生成会话ID
+// TạoSessionID Tạo ID phiên
 func GenerateSessionID() string {
 	bytes := make([]byte, 16)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
 }
 
-// HandleWebSocket 处理 WebSocket 连接
-// 依赖注入 sessionManager, globalRecognizer
+// HandleWebSocket xử lý các kết nối WebSocket
+// Trình quản lý phiên tiêm phụ thuộc, GlobalRecognizer
 func HandleWebSocket(w http.ResponseWriter, r *http.Request, sessionManager *session.Manager, globalRecognizer *sherpa.OfflineRecognizer) {
 	conn, err := Upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -44,7 +44,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request, sessionManager *ses
 		conn.SetReadDeadline(time.Now().Add(time.Duration(wsConfig.ReadTimeout) * time.Second))
 	}
 
-	// 检查recognition是否启用，如果未启用则直接返回
+	// Kiểm tra xem tính năng nhận dạng có được bật hay không và quay lại trực tiếp nếu tính năng này không được bật
 	if !config.GlobalConfig.Recognition.Enabled {
 		logger.Warnf("Recognition is disabled, closing WebSocket connection")
 		conn.WriteJSON(map[string]interface{}{
@@ -57,7 +57,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request, sessionManager *ses
 
 	sessionID := GenerateSessionID()
 
-	// 创建会话
+	// Tạo phiên
 	sess, err := sessionManager.CreateSession(sessionID, conn)
 	if err != nil {
 		logger.Errorf("Failed to create session, session_id=%s, error=%v", sessionID, err)
@@ -72,7 +72,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request, sessionManager *ses
 
 	logger.Infof("New WebSocket connection established, session_id=%s", sessionID)
 
-	// 发送连接确认
+	// Gửi xác nhận kết nối
 	if sess != nil {
 		select {
 		case sess.SendQueue <- map[string]interface{}{
@@ -85,7 +85,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request, sessionManager *ses
 		}
 	}
 
-	// 处理消息
+	// Xử lý tin nhắn
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -93,22 +93,22 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request, sessionManager *ses
 			break
 		}
 
-		// 每次收到消息都刷新读超时
+		// Thời gian chờ đọc được làm mới mỗi khi nhận được tin nhắn.
 		if wsConfig.ReadTimeout > 0 {
 			conn.SetReadDeadline(time.Now().Add(time.Duration(wsConfig.ReadTimeout) * time.Second))
 		}
 
-		// 检查消息大小
+		// Kiểm tra kích thước tin nhắn
 		if wsConfig.MaxMessageSize > 0 && len(message) > wsConfig.MaxMessageSize {
 			logger.Warnf("Message too large, closing connection")
 			break
 		}
 
-		// 处理音频数据
+		// Xử lý dữ liệu âm thanh
 		if len(message) > 0 {
 			if err := sessionManager.ProcessAudioData(sessionID, message); err != nil {
 				logger.Errorf("Failed to process audio data, session_id=%s, error=%v", sessionID, err)
-				// 通过session的SendQueue发送错误消息
+				// Gửi thông báo lỗi qua SendQueue của phiên
 				if sess != nil {
 					select {
 					case sess.SendQueue <- map[string]interface{}{

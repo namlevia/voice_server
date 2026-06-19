@@ -35,7 +35,7 @@ const (
 	defaultUUID    = "test_uuid_001"
 )
 
-// IdentifyResult 识别结果结构
+// Xác địnhResult xác định cấu trúc kết quả
 type IdentifyResult struct {
 	Identified  bool    `json:"identified"`
 	SpeakerID   string  `json:"speaker_id"`
@@ -44,7 +44,7 @@ type IdentifyResult struct {
 	Threshold   float32 `json:"threshold"`
 }
 
-// RegisterResponse 注册响应结构
+// Cấu trúc phản hồi đăng ký RegisterResponse
 type RegisterResponse struct {
 	Message     string `json:"message"`
 	UID         string `json:"uid"`
@@ -52,12 +52,12 @@ type RegisterResponse struct {
 	SpeakerName string `json:"speaker_name"`
 }
 
-// ErrorResponse 错误响应结构
+// Cấu trúc phản hồi lỗi ErrorResponse
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// SpeakerInfo 说话人信息结构
+// Cấu trúc thông tin loa SpeakInfo
 type SpeakerInfo struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -66,14 +66,14 @@ type SpeakerInfo struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
-// ListResponse 列表响应结构
+// Cấu trúc phản hồi danh sách ListResponse
 type ListResponse struct {
 	UID      string        `json:"uid"`
 	Speakers []SpeakerInfo `json:"speakers"`
 	Total    int           `json:"total"`
 }
 
-// DeleteResponse 删除响应结构
+// DeleteResponse xóa cấu trúc phản hồi
 type DeleteResponse struct {
 	Message   string `json:"message"`
 	UID       string `json:"uid"`
@@ -81,7 +81,7 @@ type DeleteResponse struct {
 }
 
 func main() {
-	// 解析命令行参数
+	// Phân tích các tham số dòng lệnh
 	var registerFile string
 	var identifyFile string
 	var listSpeakers bool
@@ -136,7 +136,7 @@ func main() {
 	fmt.Printf("服务地址: %s\n", baseURL)
 	fmt.Printf("声纹WS地址: %s\n", speakerWSURL)
 
-	// 如果所有参数都没有指定，显示使用说明
+	// Nếu tất cả các tham số không được chỉ định, hướng dẫn hiển thị
 	if registerFile == "" && identifyFile == "" && !listSpeakers && deleteSpeakerID == "" {
 		fmt.Println("\n使用方法:")
 		fmt.Println("  go run test_speaker.go -register <注册文件>")
@@ -183,7 +183,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 处理列表查询
+	// Xử lý truy vấn danh sách
 	if listSpeakers {
 		fmt.Printf("\n步骤 1: 获取声纹列表 (用户ID: %s", customUID)
 		if customAgentID != "" {
@@ -194,13 +194,13 @@ func main() {
 			fmt.Printf("❌ 获取列表失败: %v\n", err)
 			os.Exit(1)
 		}
-		// 如果只执行列表查询，直接退出
+		// Nếu bạn chỉ thực hiện truy vấn danh sách, hãy thoát trực tiếp
 		if registerFile == "" && identifyFile == "" && deleteSpeakerID == "" {
 			return
 		}
 	}
 
-	// 处理删除
+	// Xử lý việc xóa
 	if deleteSpeakerID != "" {
 		stepNum := 1
 		if listSpeakers {
@@ -216,15 +216,15 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("✅ 删除成功")
-		// 如果只执行删除操作，直接退出
+		// Nếu bạn chỉ thực hiện thao tác xóa, hãy thoát trực tiếp
 		if registerFile == "" && identifyFile == "" {
 			return
 		}
 	}
 
-	// 处理注册
+	// Quy trình đăng ký
 	if registerFile != "" {
-		// 检查注册文件是否存在
+		// Kiểm tra file đăng ký có tồn tại không
 		registerPath, err := filepath.Abs(registerFile)
 		if err != nil {
 			fmt.Printf("❌ 错误: 无法解析注册文件路径: %v\n", err)
@@ -236,7 +236,7 @@ func main() {
 		}
 		fmt.Printf("✅ 找到注册音频文件: %s\n", registerPath)
 
-		// 计算步骤编号
+		// Tính số bước
 		stepNum := 1
 		if listSpeakers {
 			stepNum++
@@ -245,7 +245,7 @@ func main() {
 			stepNum++
 		}
 
-		// 注册声纹
+		// Đăng ký giọng nói
 		fmt.Printf("\n步骤 %d: 注册声纹 (使用文件: %s)...\n", stepNum, filepath.Base(registerPath))
 		if err := registerSpeaker(registerPath, customSpeakerID, customSpeakerName, customUID, customAgentID, customUUID); err != nil {
 			fmt.Printf("❌ 注册失败: %v\n", err)
@@ -253,18 +253,18 @@ func main() {
 		}
 		fmt.Println("✅ 注册成功")
 
-		// 等待一下，确保数据已保存
+		// Đợi một lát để đảm bảo dữ liệu đã được lưu
 		time.Sleep(500 * time.Millisecond)
 
-		// 如果只执行注册操作，直接退出
+		// Nếu chỉ thực hiện thao tác đăng ký thì thoát trực tiếp
 		if identifyFile == "" {
 			return
 		}
 	}
 
-	// 处理识别
+	// nhận dạng quá trình
 	if identifyFile != "" {
-		// 检查识别文件是否存在
+		// Kiểm tra xem tập tin nhận dạng có tồn tại không
 		identifyPath, err := filepath.Abs(identifyFile)
 		if err != nil {
 			fmt.Printf("❌ 错误: 无法解析识别文件路径: %v\n", err)
@@ -276,7 +276,7 @@ func main() {
 		}
 		fmt.Printf("✅ 找到识别音频文件: %s\n", identifyPath)
 
-		// 计算步骤编号
+		// Tính số bước
 		stepNum := 1
 		if listSpeakers {
 			stepNum++
@@ -288,7 +288,7 @@ func main() {
 			stepNum++
 		}
 
-		// HTTP 识别声纹
+		// Nhận dạng giọng nói HTTP
 		fmt.Printf("\n步骤 %d: HTTP 识别声纹 (使用文件: %s", stepNum, filepath.Base(identifyPath))
 		if threshold > 0 {
 			fmt.Printf(", 阈值: %.4f", threshold)
@@ -300,7 +300,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		// 显示 HTTP 识别结果
+		// Hiển thị kết quả nhận dạng HTTP
 		fmt.Println("\nHTTP 识别结果:")
 		fmt.Println("========================================")
 		fmt.Printf("识别状态: %v\n", result.Identified)
@@ -319,7 +319,7 @@ func main() {
 		}
 		fmt.Println("========================================")
 
-		// WebSocket 流式识别
+		// Nhận dạng phát trực tuyến WebSocket
 		stepNum++
 		fmt.Printf("\n步骤 %d: WebSocket 流式识别 (使用文件: %s", stepNum, filepath.Base(identifyPath))
 		if maxFrames > 0 {
@@ -340,7 +340,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		// 显示 WebSocket 识别结果
+		// Hiển thị kết quả nhận dạng WebSocket
 		fmt.Println("\nWebSocket 流式识别结果:")
 		fmt.Println("========================================")
 		fmt.Printf("识别状态: %v\n", wsResult.Identified)
@@ -361,20 +361,20 @@ func main() {
 	}
 }
 
-// registerSpeaker 注册声纹
+// registerLoa đăng ký giọng nói
 func registerSpeaker(wavPath string, sid string, sname string, uid string, agentID string, uuid string) error {
-	// 打开文件
+	// mở tập tin
 	file, err := os.Open(wavPath)
 	if err != nil {
 		return fmt.Errorf("打开文件失败: %v", err)
 	}
 	defer file.Close()
 
-	// 创建 multipart writer
+	// Tạo trình soạn thảo nhiều phần
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 
-	// 添加表单字段
+	// Thêm trường biểu mẫu
 	if err := writer.WriteField("uid", uid); err != nil {
 		return fmt.Errorf("写入 uid 失败: %v", err)
 	}
@@ -399,7 +399,7 @@ func registerSpeaker(wavPath string, sid string, sname string, uid string, agent
 		return fmt.Errorf("写入 speaker_name 失败: %v", err)
 	}
 
-	// 添加文件
+	// Thêm tập tin
 	part, err := writer.CreateFormFile("audio", filepath.Base(wavPath))
 	if err != nil {
 		return fmt.Errorf("创建文件字段失败: %v", err)
@@ -409,24 +409,24 @@ func registerSpeaker(wavPath string, sid string, sname string, uid string, agent
 		return fmt.Errorf("复制文件内容失败: %v", err)
 	}
 
-	// 关闭 writer
+	// Đóng nhà văn
 	if err := writer.Close(); err != nil {
 		return fmt.Errorf("关闭 writer 失败: %v", err)
 	}
 
-	// 创建 HTTP 请求
+	// Tạo yêu cầu HTTP
 	req, err := http.NewRequest("POST", speakerAPI+"/register", &requestBody)
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("X-User-ID", uid) // 同时通过请求头传递 uid
+	req.Header.Set("X-User-ID", uid) // Đồng thời chuyển uid qua tiêu đề yêu cầu
 	if agentID != "" {
-		req.Header.Set("X-Agent-ID", agentID) // 同时通过请求头传递 agent_id
+		req.Header.Set("X-Agent-ID", agentID) // Đồng thời chuyển Agent_id qua tiêu đề yêu cầu
 	}
 
-	// 发送请求
+	// Gửi yêu cầu
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -437,13 +437,13 @@ func registerSpeaker(wavPath string, sid string, sname string, uid string, agent
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// Đọc phản hồi
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %v", err)
 	}
 
-	// 检查状态码
+	// Kiểm tra mã trạng thái
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
 		if err := json.Unmarshal(body, &errResp); err == nil {
@@ -452,7 +452,7 @@ func registerSpeaker(wavPath string, sid string, sname string, uid string, agent
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
-	// 解析响应
+	// Phân tích phản hồi
 	var registerResp RegisterResponse
 	if err := json.Unmarshal(body, &registerResp); err != nil {
 		return fmt.Errorf("解析响应失败: %v", err)
@@ -465,40 +465,40 @@ func registerSpeaker(wavPath string, sid string, sname string, uid string, agent
 	return nil
 }
 
-// identifySpeaker 识别声纹
-// threshold: 识别阈值，如果 <= 0 则使用服务端默认值
+// nhận dạngSpeaker nhận dạng giọng nói
+// ngưỡng: ngưỡng nhận dạng, nếu <= 0 thì sử dụng giá trị mặc định của máy chủ
 func identifySpeaker(wavPath string, uid string, agentID string, threshold float64) (*IdentifyResult, error) {
-	// 打开文件
+	// mở tập tin
 	file, err := os.Open(wavPath)
 	if err != nil {
 		return nil, fmt.Errorf("打开文件失败: %v", err)
 	}
 	defer file.Close()
 
-	// 创建 multipart writer
+	// Tạo trình soạn thảo nhiều phần
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 
-	// 添加表单字段 uid
+	// Thêm uid trường biểu mẫu
 	if err := writer.WriteField("uid", uid); err != nil {
 		return nil, fmt.Errorf("写入 uid 失败: %v", err)
 	}
 
-	// 添加表单字段 agent_id（如果提供）
+	// Thêm trường biểu mẫu Agent_id (nếu được cung cấp)
 	if agentID != "" {
 		if err := writer.WriteField("agent_id", agentID); err != nil {
 			return nil, fmt.Errorf("写入 agent_id 失败: %v", err)
 		}
 	}
 
-	// 添加表单字段 threshold（如果提供且 > 0）
+	// Thêm ngưỡng trường biểu mẫu (nếu được cung cấp và > 0)
 	if threshold > 0 {
 		if err := writer.WriteField("threshold", fmt.Sprintf("%.6f", threshold)); err != nil {
 			return nil, fmt.Errorf("写入 threshold 失败: %v", err)
 		}
 	}
 
-	// 添加文件
+	// Thêm tập tin
 	part, err := writer.CreateFormFile("audio", filepath.Base(wavPath))
 	if err != nil {
 		return nil, fmt.Errorf("创建文件字段失败: %v", err)
@@ -508,24 +508,24 @@ func identifySpeaker(wavPath string, uid string, agentID string, threshold float
 		return nil, fmt.Errorf("复制文件内容失败: %v", err)
 	}
 
-	// 关闭 writer
+	// Đóng nhà văn
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("关闭 writer 失败: %v", err)
 	}
 
-	// 创建 HTTP 请求
+	// Tạo yêu cầu HTTP
 	req, err := http.NewRequest("POST", speakerAPI+"/identify", &requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("创建请求失败: %v", err)
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("X-User-ID", uid) // 同时通过请求头传递 uid
+	req.Header.Set("X-User-ID", uid) // Đồng thời chuyển uid qua tiêu đề yêu cầu
 	if agentID != "" {
-		req.Header.Set("X-Agent-ID", agentID) // 同时通过请求头传递 agent_id
+		req.Header.Set("X-Agent-ID", agentID) // Đồng thời chuyển Agent_id qua tiêu đề yêu cầu
 	}
 
-	// 发送请求
+	// Gửi yêu cầu
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -536,13 +536,13 @@ func identifySpeaker(wavPath string, uid string, agentID string, threshold float
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// Đọc phản hồi
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("读取响应失败: %v", err)
 	}
 
-	// 检查状态码
+	// Kiểm tra mã trạng thái
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
 		if err := json.Unmarshal(body, &errResp); err == nil {
@@ -551,7 +551,7 @@ func identifySpeaker(wavPath string, uid string, agentID string, threshold float
 		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
-	// 解析响应
+	// Phân tích phản hồi
 	var result IdentifyResult
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
@@ -560,32 +560,32 @@ func identifySpeaker(wavPath string, uid string, agentID string, threshold float
 	return &result, nil
 }
 
-// readWavToFloat32 读取WAV文件并转换为float32数组
+// readWavToFloat32 đọc các tệp WAV và chuyển đổi chúng thành mảng float32
 func readWavToFloat32(wavPath string) ([]float32, int, error) {
-	// 打开文件
+	// mở tập tin
 	file, err := os.Open(wavPath)
 	if err != nil {
 		return nil, 0, fmt.Errorf("打开文件失败: %v", err)
 	}
 	defer file.Close()
 
-	// 创建WAV解码器
+	// Tạo bộ giải mã WAV
 	decoder := wav.NewDecoder(file)
 	if !decoder.IsValidFile() {
 		return nil, 0, fmt.Errorf("无效的WAV文件")
 	}
 
-	// 读取WAV文件信息
+	// Đọc thông tin tập tin WAV
 	decoder.ReadInfo()
 	format := decoder.Format()
 	sampleRate := int(format.SampleRate)
 	numChannels := int(format.NumChannels)
 
-	// 读取所有PCM数据
+	// Đọc tất cả dữ liệu PCM
 	var allSamples []float32
 
-	// 使用缓冲区读取
-	frameSize := sampleRate * 20 / 1000 // 20ms帧
+	// Đọc bằng bộ đệm
+	frameSize := sampleRate * 20 / 1000 // khung 20ms
 	audioBuf := &audio.IntBuffer{
 		Format:         format,
 		SourceBitDepth: 16,
@@ -601,14 +601,14 @@ func readWavToFloat32(wavPath string) ([]float32, int, error) {
 			return nil, 0, fmt.Errorf("读取WAV数据失败: %v", err)
 		}
 
-		// 转换为float32格式（范围[-1.0, 1.0]）
+		// Chuyển đổi sang định dạng float32 (phạm vi [-1.0, 1.0])
 		for i := 0; i < n; i++ {
 			sample := float32(audioBuf.Data[i]) / 32767.0
 			allSamples = append(allSamples, sample)
 		}
 	}
 
-	// 如果是立体声，转换为单声道（取平均值）
+	// Nếu là âm thanh nổi, hãy chuyển sang đơn âm (trung bình)
 	if numChannels == 2 {
 		monoSamples := make([]float32, len(allSamples)/2)
 		for i := 0; i < len(monoSamples); i++ {
@@ -620,24 +620,24 @@ func readWavToFloat32(wavPath string) ([]float32, int, error) {
 	return allSamples, sampleRate, nil
 }
 
-// float32ToBytes 将float32数组转换为二进制字节（小端序）
+// float32ToBytes chuyển đổi mảng float32 thành byte nhị phân (endian nhỏ)
 func float32ToBytes(samples []float32) []byte {
 	buf := make([]byte, len(samples)*4)
 	for i, sample := range samples {
-		// 将float32转换为字节（使用math.Float32bits）
+		// Chuyển đổi float32 thành byte (sử dụng math.Float32bits)
 		bits := math.Float32bits(sample)
 		binary.LittleEndian.PutUint32(buf[i*4:], bits)
 	}
 	return buf
 }
 
-// identifySpeakerWebSocket 通过WebSocket流式识别声纹
-// maxFrames: 要发送的最大帧数，0表示发送所有帧
-// threshold: 识别阈值，如果 <= 0 则使用服务端默认值
-// peekStartMs: 首次peek时机（毫秒，<=0表示不发送peek）
-// peekIntervalMs: peek间隔（毫秒，<=0表示只发送一次peek）
+// nhận dạngSpeakerWebSocket Truyền nhận dạng giọng nói thông qua WebSocket
+// maxFrames: Số lượng khung hình tối đa cần gửi, 0 nghĩa là gửi tất cả các khung hình
+// ngưỡng: ngưỡng nhận dạng, nếu <= 0 thì sử dụng giá trị mặc định của máy chủ
+// eekStartMs: thời gian xem trước lần đầu tiên (mili giây, <=0 có nghĩa là không có bản xem trước nào được gửi)
+// eekIntervalMs: khoảng thời gian xem nhanh (mili giây, <=0 có nghĩa là chỉ gửi xem nhanh một lần)
 func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFrames int, threshold float64, peekStartMs int, peekIntervalMs int) (*IdentifyResult, error) {
-	// 读取WAV文件
+	// Đọc tập tin WAV
 	audioData, sampleRate, err := readWavToFloat32(wavPath)
 	if err != nil {
 		return nil, fmt.Errorf("读取音频文件失败: %v", err)
@@ -648,8 +648,8 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 	fmt.Printf("   音频时长: %.2f 秒\n", float64(len(audioData))/float64(sampleRate))
 	fmt.Printf("   注意: 客户端不进行重采样，服务端将自动重采样到模型期望的采样率\n")
 
-	// 连接WebSocket，传入原始采样率和uid
-	// 服务端会根据传入的采样率自动重采样到模型期望的采样率（通常是16000Hz）
+	// Kết nối WebSocket, chuyển tốc độ lấy mẫu ban đầu và uid
+	// Máy chủ sẽ tự động lấy mẫu lại theo tốc độ lấy mẫu mà kiểu máy mong đợi (thường là 16000Hz) dựa trên tốc độ lấy mẫu đến.
 	wsURL := fmt.Sprintf("%s?sample_rate=%d&uid=%s", speakerWSURL, sampleRate, uid)
 	if agentID != "" {
 		wsURL += fmt.Sprintf("&agent_id=%s", url.QueryEscape(agentID))
@@ -658,7 +658,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 		wsURL += fmt.Sprintf("&threshold=%.6f", threshold)
 	}
 
-	// 创建请求头，同时通过请求头传递 uid 和 agent_id
+	// Tạo tiêu đề yêu cầu và chuyển uid và Agent_id qua tiêu đề yêu cầu
 	header := http.Header{}
 	header.Set("X-User-ID", uid)
 	if agentID != "" {
@@ -671,10 +671,10 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 	}
 	defer conn.Close()
 
-	// 设置读取超时
+	// Đặt thời gian chờ đọc
 	conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 
-	// 接收连接确认消息
+	// Nhận tin nhắn xác nhận kết nối
 	var connectionMsg map[string]interface{}
 	if err := conn.ReadJSON(&connectionMsg); err != nil {
 		return nil, fmt.Errorf("读取连接确认消息失败: %v", err)
@@ -684,11 +684,11 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 	}
 	fmt.Printf("   ✅ WebSocket连接成功\n")
 
-	// 分块发送音频数据（每块约20ms）
-	chunkSize := sampleRate * 20 / 1000 // 20ms的样本数
+	// Gửi dữ liệu âm thanh theo từng đoạn (~20ms mỗi đoạn)
+	chunkSize := sampleRate * 20 / 1000 // Số lượng mẫu trong 20ms
 	totalChunks := (len(audioData) + chunkSize - 1) / chunkSize
 
-	// 如果指定了最大帧数，限制要发送的块数
+	// Nếu số lượng khung tối đa được chỉ định, hãy giới hạn số lượng khối được gửi
 	chunksToSend := totalChunks
 	if maxFrames > 0 && maxFrames < totalChunks {
 		chunksToSend = maxFrames
@@ -697,7 +697,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 		fmt.Printf("   开始发送音频数据（分 %d 块，每块约 %d 样本）...\n", totalChunks, chunkSize)
 	}
 
-	// peek 调度配置（按累计发送音频时长触发）
+	// cấu hình lập lịch xem nhanh (được kích hoạt bởi thời lượng gửi âm thanh tích lũy)
 	peekEnabled := peekStartMs > 0
 	peekStartSamples := sampleRate * peekStartMs / 1000
 	peekIntervalSamples := sampleRate * peekIntervalMs / 1000
@@ -706,14 +706,14 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 			peekStartSamples = 1
 		}
 		if peekIntervalSamples <= 0 {
-			peekIntervalSamples = 0 // 仅发送一次
+			peekIntervalSamples = 0 // Chỉ gửi một lần
 		}
 		fmt.Printf("   🔎 已启用peek: start=%dms, interval=%dms\n", peekStartMs, peekIntervalMs)
 	}
 	nextPeekSamples := peekStartSamples
 	peekSeq := 0
 
-	// 启动goroutine接收消息
+	// Bắt đầu goroutine để nhận tin nhắn
 	resultChan := make(chan *IdentifyResult, 1)
 	errorChan := make(chan error, 1)
 
@@ -737,7 +737,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 				if msgType, ok := msg["type"].(string); ok {
 					switch msgType {
 					case "audio_received":
-						// 音频接收确认
+						// Xác nhận tiếp nhận âm thanh
 						if samples, ok := msg["samples"].(float64); ok {
 							fmt.Printf("   📦 服务器确认收到 %d 样本\n", int(samples))
 						}
@@ -803,11 +803,11 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 		}
 	}()
 
-	// 发送音频数据块
+	// Gửi khối dữ liệu âm thanh
 	totalSamplesSent := 0
 	currentChunk := 0
 	for i := 0; i < len(audioData); i += chunkSize {
-		// 如果指定了最大帧数，检查是否已达到限制（在发送前检查）
+		// Nếu chỉ định số lượng khung tối đa, hãy kiểm tra xem đã đạt đến giới hạn chưa (kiểm tra trước khi gửi)
 		if maxFrames > 0 && currentChunk >= maxFrames {
 			fmt.Printf("   ⚠️  已达到最大帧数限制 (%d 帧)，停止发送\n", maxFrames)
 			break
@@ -827,7 +827,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 			return nil, fmt.Errorf("发送音频数据失败: %v", err)
 		}
 
-		// 在发送过程中按计划发送 peek 请求（可多次）
+		// Gửi yêu cầu xem trước theo lịch trình trong quá trình gửi (có thể nhiều lần)
 		for peekEnabled && totalSamplesSent >= nextPeekSamples {
 			peekSeq++
 			requestID := fmt.Sprintf("peek_%d", peekSeq)
@@ -841,7 +841,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 			fmt.Printf("   🔎 已发送peek请求 %s (累计音频 %.0fms)\n",
 				requestID, float64(totalSamplesSent)/float64(sampleRate)*1000)
 
-			// interval<=0 只发一次peek
+			// interval<=0 chỉ gửi bản tóm tắt một lần
 			if peekIntervalSamples <= 0 {
 				peekEnabled = false
 				break
@@ -849,7 +849,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 			nextPeekSamples += peekIntervalSamples
 		}
 
-		// 显示发送进度
+		// Hiển thị tiến trình gửi
 		shouldPrint := currentChunk%10 == 0 || end == len(audioData) || (maxFrames > 0 && currentChunk >= maxFrames)
 		if shouldPrint {
 			fmt.Printf("   已发送 %d/%d 块 (共 %d 样本)\n", currentChunk, chunksToSend, totalSamplesSent)
@@ -862,7 +862,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 
 	fmt.Printf("   ✅ 音频数据发送完成\n")
 
-	// 发送完成命令
+	// Gửi lệnh hoàn thành
 	finishCmd := map[string]interface{}{
 		"action": "finish",
 	}
@@ -871,10 +871,10 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 	}
 	fmt.Printf("   ✅ 已发送完成命令，等待识别结果...\n")
 
-	// 等待结果
+	// Đang chờ kết quả
 	select {
 	case result := <-resultChan:
-		// 显示识别详情
+		// Hiển thị chi tiết nhận dạng
 		if !result.Identified {
 			fmt.Printf("   ⚠️  识别失败: 相似度 %.4f < 阈值 %.4f\n", result.Confidence, result.Threshold)
 		}
@@ -886,7 +886,7 @@ func identifySpeakerWebSocket(wavPath string, uid string, agentID string, maxFra
 	}
 }
 
-// 辅助函数：从map中安全获取值
+// Chức năng trợ giúp: lấy giá trị từ bản đồ một cách an toàn
 func getString(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
 		return v
@@ -908,9 +908,9 @@ func getFloat32(m map[string]interface{}, key string) float32 {
 	return 0.0
 }
 
-// listSpeakersFunc 获取声纹列表
+// listSpeakersFunc lấy danh sách giọng nói
 func listSpeakersFunc(uid string, agentID string) error {
-	// 构建 URL，安全编码参数
+	// Xây dựng URL, mã hóa thông số an toàn
 	apiURL, err := url.Parse(speakerAPI + "/list")
 	if err != nil {
 		return fmt.Errorf("解析URL失败: %v", err)
@@ -922,18 +922,18 @@ func listSpeakersFunc(uid string, agentID string) error {
 	}
 	apiURL.RawQuery = params.Encode()
 
-	// 创建 HTTP 请求
+	// Tạo yêu cầu HTTP
 	req, err := http.NewRequest("GET", apiURL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	req.Header.Set("X-User-ID", uid) // 同时通过请求头传递 uid
+	req.Header.Set("X-User-ID", uid) // Đồng thời chuyển uid qua tiêu đề yêu cầu
 	if agentID != "" {
-		req.Header.Set("X-Agent-ID", agentID) // 同时通过请求头传递 agent_id
+		req.Header.Set("X-Agent-ID", agentID) // Đồng thời chuyển Agent_id qua tiêu đề yêu cầu
 	}
 
-	// 发送请求
+	// Gửi yêu cầu
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -944,13 +944,13 @@ func listSpeakersFunc(uid string, agentID string) error {
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// Đọc phản hồi
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %v", err)
 	}
 
-	// 检查状态码
+	// Kiểm tra mã trạng thái
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
 		if err := json.Unmarshal(body, &errResp); err == nil {
@@ -959,13 +959,13 @@ func listSpeakersFunc(uid string, agentID string) error {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
-	// 解析响应
+	// Phân tích phản hồi
 	var listResp ListResponse
 	if err := json.Unmarshal(body, &listResp); err != nil {
 		return fmt.Errorf("解析响应失败: %v", err)
 	}
 
-	// 显示结果
+	// Hiển thị kết quả
 	fmt.Println("\n声纹列表:")
 	fmt.Println("========================================")
 	fmt.Printf("用户ID: %s\n", listResp.UID)
@@ -992,14 +992,14 @@ func listSpeakersFunc(uid string, agentID string) error {
 	return nil
 }
 
-// deleteSpeaker 删除声纹
+// deleteSpeaker xóa giọng nói
 func deleteSpeaker(speakerID string, uid string, agentID string) error {
-	// 构建 URL，安全编码路径参数
+	// Xây dựng URL, mã hóa tham số đường dẫn an toàn
 	apiURL, err := url.Parse(speakerAPI)
 	if err != nil {
 		return fmt.Errorf("解析URL失败: %v", err)
 	}
-	// 使用 PathEscape 编码 speakerID，确保特殊字符正确处理
+	// Sử dụng PathEscape để mã hóa ID loa nhằm đảm bảo các ký tự đặc biệt được xử lý chính xác
 	apiURL.Path += "/" + url.PathEscape(speakerID)
 	params := url.Values{}
 	params.Set("uid", uid)
@@ -1008,18 +1008,18 @@ func deleteSpeaker(speakerID string, uid string, agentID string) error {
 	}
 	apiURL.RawQuery = params.Encode()
 
-	// 创建 HTTP DELETE 请求
+	// Tạo một yêu cầu XÓA HTTP
 	req, err := http.NewRequest("DELETE", apiURL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	req.Header.Set("X-User-ID", uid) // 同时通过请求头传递 uid
+	req.Header.Set("X-User-ID", uid) // Đồng thời chuyển uid qua tiêu đề yêu cầu
 	if agentID != "" {
-		req.Header.Set("X-Agent-ID", agentID) // 同时通过请求头传递 agent_id
+		req.Header.Set("X-Agent-ID", agentID) // Đồng thời chuyển Agent_id qua tiêu đề yêu cầu
 	}
 
-	// 发送请求
+	// Gửi yêu cầu
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -1030,13 +1030,13 @@ func deleteSpeaker(speakerID string, uid string, agentID string) error {
 	}
 	defer resp.Body.Close()
 
-	// 读取响应
+	// Đọc phản hồi
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("读取响应失败: %v", err)
 	}
 
-	// 检查状态码
+	// Kiểm tra mã trạng thái
 	if resp.StatusCode != http.StatusOK {
 		var errResp ErrorResponse
 		if err := json.Unmarshal(body, &errResp); err == nil {
@@ -1045,7 +1045,7 @@ func deleteSpeaker(speakerID string, uid string, agentID string) error {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
-	// 解析响应
+	// Phân tích phản hồi
 	var deleteResp DeleteResponse
 	if err := json.Unmarshal(body, &deleteResp); err != nil {
 		return fmt.Errorf("解析响应失败: %v", err)

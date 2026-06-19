@@ -9,14 +9,14 @@ import (
 	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 )
 
-// Pool 资源池接口 - 统一不同池实现的接口
+// Giao diện nhóm tài nguyên nhóm - một giao diện thống nhất việc triển khai nhóm khác nhau
 type Pool interface {
 	SubmitTask(task *Task) error
 	GetStats() map[string]interface{}
 	Shutdown()
 }
 
-// Task 任务结构 - 用于StreamPool
+// Cấu trúc nhiệm vụ nhiệm vụ - dành cho StreamPool
 type Task struct {
 	ID         string
 	SessionID  string
@@ -25,32 +25,32 @@ type Task struct {
 	ResultChan chan *Result
 	Callback   func(string, error)
 	Context    context.Context
-	Timeout    time.Duration // 任务超时时间
-	CreatedAt  time.Time     // 任务创建时间
+	Timeout    time.Duration // Hết thời gian thực hiện nhiệm vụ
+	CreatedAt  time.Time     // Thời gian tạo nhiệm vụ
 }
 
-// Result 识别结果
+// Kết quả nhận dạng kết quả
 type Result struct {
 	Text      string
 	Timestamp time.Time
 	Error     error
 }
 
-// PoolStats 池统计信息
+// Thống kê nhóm PoolStats
 type PoolStats struct {
 	TasksSubmitted      int64
 	TasksProcessed      int64
 	TasksRejected       int64
-	TotalProcessingTime int64 // 纳秒
-	MaxProcessingTime   int64 // 纳秒
+	TotalProcessingTime int64 // nano giây
+	MaxProcessingTime   int64 // nano giây
 }
 
-// NewPoolStats 创建新的统计实例
+// NewPoolStats tạo một phiên bản thống kê mới
 func NewPoolStats() *PoolStats {
 	return &PoolStats{}
 }
 
-// Worker 工作器结构 - 保留原有的多实例架构
+// Cấu trúc Worker Worker - giữ lại kiến ​​trúc đa phiên bản ban đầu
 type Worker struct {
 	ID         int
 	recognizer *sherpa.OfflineRecognizer
@@ -60,7 +60,7 @@ type Worker struct {
 	isActive   int32
 }
 
-// 错误定义
+// Định nghĩa lỗi
 var (
 	ErrPoolShutdown = fmt.Errorf("pool is shutdown")
 	ErrQueueFull    = fmt.Errorf("task queue is full")

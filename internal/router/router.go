@@ -8,13 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewRouter 注册所有路由，返回 *gin.Engine
+// NewRouter đăng ký tất cả các tuyến và trả về *gin.Engine
 func NewRouter(deps *bootstrap.AppDependencies) *gin.Engine {
 	ginRouter := gin.New()
 	ginRouter.Use(gin.Recovery())
-	// TODO: 根据需要注入 gin.Logger()
+	// VIỆC CẦN LÀM: Tiêm gin.Logger() nếu cần
 
-	// 注册基础路由
+	// Đăng ký định tuyến cơ bản
 	ginRouter.GET("/ws", func(c *gin.Context) {
 		ws.HandleWebSocket(c.Writer, c.Request, deps.SessionManager, deps.GlobalRecognizer)
 	})
@@ -22,11 +22,11 @@ func NewRouter(deps *bootstrap.AppDependencies) *gin.Engine {
 	ginRouter.GET("/health", handlers.HealthHandler(deps))
 	ginRouter.GET("/stats", handlers.StatsHandler(deps))
 
-	// 静态文件服务
+	// Dịch vụ tập tin tĩnh
 	ginRouter.Static("/static", "./static")
 	ginRouter.StaticFile("/", "./static/index.html")
 
-	// 注册声纹识别路由（如果启用）
+	// Đăng ký lộ trình nhận dạng giọng nói (nếu được bật)
 	if deps.SpeakerHandler != nil {
 		deps.SpeakerHandler.RegisterRoutes(ginRouter)
 	}

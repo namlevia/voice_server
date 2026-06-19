@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config 配置结构
+// Cấu hình cấu hình cấu hình
 type Config struct {
 	Server struct {
 		Port           int    `mapstructure:"port"`
@@ -119,9 +119,9 @@ type TenVADConf struct {
 
 var GlobalConfig Config
 
-// InitConfig 初始化配置
+// Cấu hình khởi tạo initConfig
 func InitConfig(configPath string) error {
-	// 设置配置文件名和路径
+	// Đặt tên và đường dẫn tệp cấu hình
 	if configPath != "" {
 		viper.SetConfigFile(configPath)
 	} else {
@@ -132,25 +132,25 @@ func InitConfig(configPath string) error {
 		viper.AddConfigPath("/etc/voice_server/")
 	}
 
-	// 设置环境变量前缀
+	// Đặt tiền tố biến môi trường
 	viper.SetEnvPrefix("VAD_ASR")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
-	// 读取配置文件
+	// Đọc tập tin cấu hình
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// 配置文件未找到，使用默认值
+			// Không tìm thấy tệp cấu hình, sử dụng giá trị mặc định
 			fmt.Println("⚠️  Config file not found, using defaults")
 		} else {
-			// 配置文件找到但读取出错
+			// Đã tìm thấy tệp cấu hình nhưng đọc lỗi
 			return fmt.Errorf("error reading config file: %w", err)
 		}
 	} else {
 		fmt.Printf("✅ Using config file: %s\n", viper.ConfigFileUsed())
 	}
 
-	// 将配置解析到结构体
+	// Phân tích cấu hình thành cấu trúc
 	if err := viper.Unmarshal(&GlobalConfig); err != nil {
 		return fmt.Errorf("error unmarshaling config: %w", err)
 	}
@@ -158,69 +158,69 @@ func InitConfig(configPath string) error {
 	return nil
 }
 
-// LoadConfig 加载配置文件（保持向后兼容）
+// LoadConfig tải tệp cấu hình (duy trì khả năng tương thích ngược)
 func LoadConfig(filename string) error {
 	return InitConfig(filename)
 }
 
-// GetConfig 获取配置
+// GetConfig Nhận cấu hình
 func GetConfig() *Config {
 	return &GlobalConfig
 }
 
-// GetViper 获取viper实例
+// GetViper có phiên bản viper
 func GetViper() *viper.Viper {
 	return viper.GetViper()
 }
 
-// WatchConfig 监听配置文件变化 (已废弃，使用HotReloadManager)
+// WatchConfig giám sát các thay đổi của tệp cấu hình (lỗi thời, sử dụng HotReloadManager)
 func WatchConfig(callback func()) {
 	fmt.Println("⚠️  WatchConfig is deprecated, use HotReloadManager instead")
 }
 
-// SaveConfig 保存配置到文件
+// SaveConfig lưu cấu hình vào một tập tin
 func SaveConfig() error {
 	return viper.WriteConfig()
 }
 
-// SaveConfigAs 保存配置到指定文件
+// SaveConfigAs lưu cấu hình vào tệp được chỉ định
 func SaveConfigAs(filename string) error {
 	return viper.WriteConfigAs(filename)
 }
 
-// SetConfigValue 设置配置值
+// SetConfigValue đặt giá trị cấu hình
 func SetConfigValue(key string, value interface{}) {
 	viper.Set(key, value)
-	// 重新解析到结构体
+	// Phân tích lại cấu trúc
 	viper.Unmarshal(&GlobalConfig)
 }
 
-// GetConfigValue 获取配置值
+// GetConfigValue Lấy giá trị cấu hình
 func GetConfigValue(key string) interface{} {
 	return viper.Get(key)
 }
 
-// GetString 获取字符串配置值
+// GetString Lấy giá trị cấu hình chuỗi
 func GetString(key string) string {
 	return viper.GetString(key)
 }
 
-// GetInt 获取整数配置值
+// GetInt nhận giá trị cấu hình số nguyên
 func GetInt(key string) int {
 	return viper.GetInt(key)
 }
 
-// GetBool 获取布尔配置值
+// GetBool nhận giá trị cấu hình Boolean
 func GetBool(key string) bool {
 	return viper.GetBool(key)
 }
 
-// GetFloat64 获取浮点数配置值
+// GetFloat64 Lấy giá trị cấu hình dấu phẩy động
 func GetFloat64(key string) float64 {
 	return viper.GetFloat64(key)
 }
 
-// PrintConfig 打印当前配置
+// PrintConfig in cấu hình hiện tại
 func PrintConfig() {
 	fmt.Println("📋 Current Configuration:")
 	fmt.Printf("  Server: %s:%d\n", GlobalConfig.Server.Host, GlobalConfig.Server.Port)

@@ -16,54 +16,54 @@ import (
 	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 )
 
-// Session WebSocket会话
+// Phiên WebSocket phiên
 type Session struct {
 	ID          string
 	Conn        *websocket.Conn
-	VADInstance pool.VADInstanceInterface // 使用VAD实例接口
-	LastSeen    int64                     // 使用int64存储时间戳
+	VADInstance pool.VADInstanceInterface // Sử dụng giao diện phiên bản VAD
+	LastSeen    int64                     // Sử dụng int64 để lưu trữ dấu thời gian
 	mu          sync.RWMutex
 	closed      int32
 
-	// 发送队列和通道
+	// Gửi hàng đợi và kênh
 	SendQueue    chan interface{}
 	sendDone     chan struct{}
 	sendErrCount int32
 
-	// 活跃性检测
+	// Phát hiện sự sống
 	lastActivity time.Time
 
-	// ten-vad 相关
+	// liên quan đến mười-vad
 	isInSpeech        bool
 	currentSegment    []float32
 	silenceFrameCount int
 }
 
-// Manager 会话管理器
+// Trình quản lý phiên quản lý
 type Manager struct {
 	sessions   map[string]*Session
 	recognizer *sherpa.OfflineRecognizer
 	vadPool    pool.VADPoolInterface
 	mu         sync.RWMutex
 
-	// 统计信息
+	// Thống kê
 	totalSessions  int64
 	activeSessions int64
 	totalMessages  int64
 
-	// 清理
+	// dọn dẹp
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// 全局缓冲区池（8KB）
+// Vùng đệm toàn cầu (8KB)
 var bufferPool = sync.Pool{
 	New: func() interface{} {
 		return make([]byte, 8192)
 	},
 }
 
-// 全局float32切片池（最大支持8KB/2=4096采样点）
+// Nhóm lát float32 toàn cầu (hỗ trợ tối đa 8KB/2=4096 điểm lấy mẫu)
 var float32Pool = sync.Pool{}
 
 func getFloat32PoolSlice() []float32 {
@@ -74,7 +74,7 @@ func getFloat32PoolSlice() []float32 {
 	return make([]float32, chunkSize)
 }
 
-// NewManager 创建新的会话管理器
+// NewManager tạo trình quản lý phiên mới
 func NewManager(recognizer *sherpa.OfflineRecognizer, vadPool pool.VADPoolInterface) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -89,9 +89,9 @@ func NewManager(recognizer *sherpa.OfflineRecognizer, vadPool pool.VADPoolInterf
 	return manager
 }
 
-// CreateSession 创建新会话
+// CreateSession tạo một phiên mới
 func (m *Manager) CreateSession(sessionID string, conn *websocket.Conn) (*Session, error) {
-	// 不在此处分配VAD实例，VADInstance初始化为nil
+	// Phiên bản VAD không được phân bổ ở đây, VADInstance được khởi tạo thành 0
 	if m.vadPool == nil {
 		return nil, fmt.Errorf("VAD pool is not initialized")
 	}
@@ -99,7 +99,7 @@ func (m *Manager) CreateSession(sessionID string, conn *websocket.Conn) (*Sessio
 	session := &Session{
 		ID:                sessionID,
 		Conn:              conn,
-		VADInstance:       nil, // 延迟分配
+		VADInstance:       nil, // phân bổ chậm trễ
 		LastSeen:          time.Now().UnixNano(),
 		closed:            0,
 		SendQueue:         make(chan interface{}, config.GlobalConfig.Session.SendQueueSize),
@@ -111,7 +111,7 @@ func (m *Manager) CreateSession(sessionID string, conn *websocket.Conn) (*Sessio
 		silenceFrameCount: 0,
 	}
 
-	// 启动发送协程
+	// Bắt đầu gửi coroutine
 	go session.sendLoop()
 
 	m.mu.Lock()
@@ -124,21 +124,21 @@ func (m *Manager) CreateSession(sessionID string, conn *websocket.Conn) (*Sessio
 	return session, nil
 }
 
-// GetSession 获取会话
+// GetSession nhận phiên
 func (m *Manager) GetSession(sessionID string) (*Session, bool) {
 	m.mu.RLock()
 	session, exists := m.sessions[sessionID]
 	m.mu.RUnlock()
 
 	if exists {
-		// 使用原子操作更新LastSeen
+		// Cập nhật LastSeen bằng các thao tác nguyên tử
 		atomic.StoreInt64(&session.LastSeen, time.Now().UnixNano())
 	}
 
 	return session, exists
 }
 
-// RemoveSession 移除会话
+// RemoveSessionXóa phiên
 func (m *Manager) RemoveSession(sessionID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -151,7 +151,7 @@ func (m *Manager) RemoveSession(sessionID string) {
 	}
 }
 
-// sendLoop 发送循环
+// vòng lặp gửi sendLoop
 func (s *Session) sendLoop() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -166,11 +166,11 @@ func (s *Session) sendLoop() {
 				return
 			}
 
-			// 直接写消息，不再设置写超时
+			// Viết tin nhắn trực tiếp mà không đặt thời gian chờ ghi
 			if err := s.Conn.WriteJSON(msg); err != nil {
 				atomic.AddInt32(&s.sendErrCount, 1)
 				logger.Errorf("Failed to send message to session %s: %v", s.ID, err)
-				// 如果连续错误超过阈值，关闭会话
+				// Nếu các lỗi liên tiếp vượt quá ngưỡng, hãy đóng phiên
 				if atomic.LoadInt32(&s.sendErrCount) > int32(config.GlobalConfig.Session.MaxSendErrors) {
 					logger.Errorf("Too many send errors for session, closing")
 					atomic.StoreInt32(&s.closed, 1)
@@ -185,7 +185,7 @@ func (s *Session) sendLoop() {
 	}
 }
 
-// ProcessAudioData 处理音频数据
+// ProcessAudioData xử lý dữ liệu âm thanh
 func (m *Manager) ProcessAudioData(sessionID string, audioData []byte) error {
 	session, exists := m.GetSession(sessionID)
 	if !exists {
@@ -198,7 +198,7 @@ func (m *Manager) ProcessAudioData(sessionID string, audioData []byte) error {
 		return fmt.Errorf("session %s is closed", sessionID)
 	}
 
-	// 检查并延迟分配VAD实例
+	// Kiểm tra và trì hoãn việc phân bổ các phiên bản VAD
 	if session.VADInstance == nil {
 		vadInstance, err := m.vadPool.Get()
 		if err != nil {
@@ -209,11 +209,11 @@ func (m *Manager) ProcessAudioData(sessionID string, audioData []byte) error {
 		logger.Infof("✅ Session %s assigned %s VAD instance %d", sessionID, vadInstance.GetType(), vadInstance.GetID())
 	}
 
-	// 更新会话活跃时间
+	// Cập nhật thời gian hoạt động của phiên
 	atomic.StoreInt64(&session.LastSeen, time.Now().UnixNano())
 	atomic.AddInt64(&m.totalMessages, 1)
 
-	// 验证输入数据
+	// Xác thực dữ liệu đầu vào
 	if len(audioData) == 0 {
 		logger.Warnf("Session %s: Received empty audio data", sessionID)
 		return fmt.Errorf("empty audio data")
@@ -224,7 +224,7 @@ func (m *Manager) ProcessAudioData(sessionID string, audioData []byte) error {
 		return fmt.Errorf("invalid audio data length: %d", len(audioData))
 	}
 
-	// 转换音频数据
+	// Chuyển đổi dữ liệu âm thanh
 	numSamples := len(audioData) / 2
 	samples := float32Pool.Get()
 	var float32Slice []float32
@@ -246,7 +246,7 @@ func (m *Manager) ProcessAudioData(sessionID string, audioData []byte) error {
 
 	logger.Debugf("Session %s: Converted %d bytes to %d float32 samples", sessionID, len(audioData), numSamples)
 
-	// 根据VAD类型处理
+	// Xử lý theo loại VAD
 	switch session.VADInstance.GetType() {
 	case pool.SILERO_TYPE:
 		return m.processSileroVAD(session, sessionID, float32Slice)
@@ -257,60 +257,60 @@ func (m *Manager) ProcessAudioData(sessionID string, audioData []byte) error {
 	}
 }
 
-// processSileroVAD 处理Silero VAD
+// quy trìnhSileroVAD Quy trình Silero VAD
 func (m *Manager) processSileroVAD(session *Session, sessionID string, float32Slice []float32) error {
-	// 类型断言获取Silero VAD实例
+	// Nhập xác nhận để lấy phiên bản Silero VAD
 	sileroInstance, ok := session.VADInstance.(*pool.SileroVADInstance)
 	if !ok {
 		return fmt.Errorf("invalid Silero VAD instance type")
 	}
 
-	// VAD检测 - 使用响应超时配置
+	// Phát hiện VAD - sử dụng cấu hình thời gian chờ phản hồi
 	vadTimeout := time.Duration(config.GlobalConfig.Response.Timeout) * time.Second
 	vadCtx, vadCancel := context.WithTimeout(context.Background(), vadTimeout)
 	defer vadCancel()
 
-	// 在goroutine中执行VAD处理，避免阻塞
+	// Thực hiện xử lý VAD trong goroutine để tránh bị chặn
 	vadDone := make(chan struct{})
 	go func() {
 		defer close(vadDone)
 		sileroInstance.VAD.AcceptWaveform(float32Slice)
 	}()
 
-	// 等待VAD处理完成或超时
+	// Đang chờ quá trình xử lý VAD hoàn tất hoặc hết thời gian chờ
 	select {
 	case <-vadDone:
-		// VAD处理完成
+		// Quá trình xử lý VAD đã hoàn tất
 	case <-vadCtx.Done():
 		logger.Warnf("Session %s: VAD processing timeout", sessionID)
 		return fmt.Errorf("VAD processing timeout")
 	}
 
-	// 处理语音段
+	// Xử lý các phân đoạn lời nói
 	segmentCount := 0
 	var speechSegments [][]float32
 	sampleRate := config.GlobalConfig.Audio.SampleRate
 
-	// 收集所有有效的语音段
+	// Thu thập tất cả các đoạn lời nói hợp lệ
 	for !sileroInstance.VAD.IsEmpty() {
 		segment := sileroInstance.VAD.Front()
 		sileroInstance.VAD.Pop()
 		segmentCount++
 
 		if segment != nil && len(segment.Samples) > 0 {
-			// 再次检查会话状态
+			// Kiểm tra lại trạng thái phiên
 			if atomic.LoadInt32(&session.closed) == 1 {
 				logger.Warnf("Session %s closed during speech segment processing", sessionID)
 				return fmt.Errorf("session %s closed during processing", sessionID)
 			}
 
-			// 验证音频数据
+			// Xác minh dữ liệu âm thanh
 			if len(segment.Samples) == 0 {
 				logger.Warnf("Session %s: Speech segment %d has no samples", sessionID, segmentCount)
 				continue
 			}
 
-			// 音频时长检查
+			// Kiểm tra thời lượng âm thanh
 			duration := float64(len(segment.Samples)) / float64(sampleRate)
 			minSpeechDuration := float64(config.GlobalConfig.VAD.SileroVAD.MinSpeechDuration)
 			if duration < minSpeechDuration {
@@ -318,7 +318,7 @@ func (m *Manager) processSileroVAD(session *Session, sessionID string, float32Sl
 				continue
 			}
 
-			// 检查最大时长
+			// Kiểm tra thời lượng tối đa
 			maxDuration := float64(config.GlobalConfig.VAD.SileroVAD.MaxSpeechDuration)
 			if duration > maxDuration {
 				logger.Warnf("Session %s: Segment %d too long (%.2fs > %.2fs), truncating", sessionID, segmentCount, duration, maxDuration)
@@ -333,9 +333,9 @@ func (m *Manager) processSileroVAD(session *Session, sessionID string, float32Sl
 		}
 	}
 
-	// 处理收集到的语音段
+	// Xử lý các đoạn giọng nói được thu thập
 	for i, samples := range speechSegments {
-		// 提交识别任务
+		// Gửi nhiệm vụ công nhận
 		taskID := fmt.Sprintf("%s_%d_%d", sessionID, time.Now().UnixNano(), i)
 		go func(samples []float32, sampleRate int, sessionID string, taskID string) {
 			stream := sherpa.NewOfflineStream(m.recognizer)
@@ -354,9 +354,9 @@ func (m *Manager) processSileroVAD(session *Session, sessionID string, float32Sl
 	return nil
 }
 
-// processTenVAD 处理TEN-VAD
+// quy trìnhTenVAD xử lý TEN-VAD
 func (m *Manager) processTenVAD(session *Session, sessionID string, float32Slice []float32) error {
-	// 类型断言获取TEN-VAD实例
+	// Xác nhận kiểu nhận phiên bản TEN-VAD
 	tenVADInstance, ok := session.VADInstance.(*pool.TenVADInstance)
 	if !ok {
 		return fmt.Errorf("invalid TEN-VAD instance type")
@@ -366,7 +366,7 @@ func (m *Manager) processTenVAD(session *Session, sessionID string, float32Slice
 	minSpeechFrames := config.GlobalConfig.VAD.TenVAD.MinSpeechFrames
 	maxSilenceFrames := config.GlobalConfig.VAD.TenVAD.MaxSilenceFrames
 
-	// 分帧处理
+	// đóng khung
 	for i := 0; i < len(float32Slice); i += hopSize {
 		end := i + hopSize
 		if end > len(float32Slice) {
@@ -390,7 +390,7 @@ func (m *Manager) processTenVAD(session *Session, sessionID string, float32Slice
 				session.silenceFrameCount = 0
 			}
 			session.currentSegment = append(session.currentSegment, frame...)
-			session.silenceFrameCount = 0 // 重置静音计数
+			session.silenceFrameCount = 0 // Đặt lại số lần im lặng
 		} else {
 			if session.isInSpeech {
 				session.silenceFrameCount++
@@ -430,7 +430,7 @@ func (m *Manager) processTenVAD(session *Session, sessionID string, float32Slice
 	return nil
 }
 
-// handleRecognitionResult 处理识别结果
+// handRecognitionResult xử lý kết quả nhận dạng
 func (m *Manager) handleRecognitionResult(sessionID, result string, err error) {
 	session, exists := m.GetSession(sessionID)
 	if !exists {
@@ -438,13 +438,13 @@ func (m *Manager) handleRecognitionResult(sessionID, result string, err error) {
 		return
 	}
 
-	// 检查会话是否已关闭
+	// Kiểm tra xem phiên đã được đóng chưa
 	if atomic.LoadInt32(&session.closed) == 1 {
 		logger.Warnf("Session %s is closed when handling recognition result", sessionID)
 		return
 	}
 
-	// 只在err为nil且result非空时返回识别结果
+	// Kết quả nhận dạng chỉ được trả về khi err bằng 0 và kết quả không trống.
 	if err == nil && len(result) > 0 {
 		response := map[string]interface{}{
 			"type":      "final",
@@ -460,24 +460,24 @@ func (m *Manager) handleRecognitionResult(sessionID, result string, err error) {
 		return
 	}
 
-	// 有错误时记录日志，但不返回给用户
+	// Log khi có lỗi nhưng không trả lại cho người dùng
 	if err != nil {
 		logger.Errorf("Recognition error for session %s: %v", sessionID, err)
 	}
-	// 其他情况（如识别失败、错误或结果为空）不返回任何内容
+	// Trong các trường hợp khác (chẳng hạn như lỗi nhận dạng, lỗi hoặc kết quả trống) không có gì được trả về
 }
 
-// closeSession 关闭会话
+// closeSession đóng phiên
 func (m *Manager) closeSession(session *Session) {
 	if atomic.CompareAndSwapInt32(&session.closed, 0, 1) {
-		// 关闭发送通道
+		// Đóng kênh gửi
 		close(session.sendDone)
-		// 清空发送队列
+		// Xóa hàng đợi gửi
 		for len(session.SendQueue) > 0 {
 			<-session.SendQueue
 		}
 
-		// 归还VAD实例到池中
+		// Trả lại phiên bản VAD về nhóm
 		if session.VADInstance != nil && m.vadPool != nil {
 			m.vadPool.Put(session.VADInstance)
 			session.VADInstance = nil
@@ -490,12 +490,12 @@ func (m *Manager) closeSession(session *Session) {
 	}
 }
 
-// GetStats 获取管理器统计信息 - 增强版本
+// GetStats Nhận số liệu thống kê của người quản lý - phiên bản nâng cao
 func (m *Manager) GetStats() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// 获取资源池统计
+	// Nhận số liệu thống kê về nhóm tài nguyên
 	var poolStats map[string]interface{}
 	if m.vadPool != nil {
 		poolStats = m.vadPool.GetStats()
@@ -512,14 +512,14 @@ func (m *Manager) GetStats() map[string]interface{} {
 	}
 }
 
-// Shutdown 关闭管理器
+// Tắt máy đóng trình quản lý
 func (m *Manager) Shutdown() {
 	logger.Infof("🛑 Shutting down session manager...")
 
-	// 取消上下文
+	// Hủy ngữ cảnh
 	m.cancel()
 
-	// 关闭所有会话
+	// Đóng tất cả các phiên
 	m.mu.Lock()
 	for sessionID, session := range m.sessions {
 		logger.Infof("🛑 Closing session: %s", sessionID)

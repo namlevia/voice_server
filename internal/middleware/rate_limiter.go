@@ -9,7 +9,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// RateLimiter 速率限制器
+// Bộ giới hạn tốc độ RateLimiter
 type RateLimiter struct {
 	enabled   bool
 	limiters  map[string]*rate.Limiter
@@ -21,7 +21,7 @@ type RateLimiter struct {
 	connMu    sync.Mutex
 }
 
-// NewRateLimiter 创建新的速率限制器
+// NewRateLimiter tạo ra một bộ giới hạn tốc độ mới
 func NewRateLimiter(enabled bool, requestsPerSecond int, burstSize int, maxConnections int) *RateLimiter {
 	return &RateLimiter{
 		enabled:  enabled,
@@ -32,7 +32,7 @@ func NewRateLimiter(enabled bool, requestsPerSecond int, burstSize int, maxConne
 	}
 }
 
-// getLimiter 获取或创建IP的限制器
+// getLimiter Nhận hoặc tạo bộ giới hạn IP
 func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
@@ -46,7 +46,7 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 	return limiter
 }
 
-// cleanupLimiters 清理过期的限制器
+// cleanupLimiters dọn dẹp các bộ giới hạn đã hết hạn
 func (rl *RateLimiter) cleanupLimiters() {
 	ticker := time.NewTicker(time.Minute)
 	go func() {
@@ -54,7 +54,7 @@ func (rl *RateLimiter) cleanupLimiters() {
 			rl.mu.Lock()
 			for ip, limiter := range rl.limiters {
 				if limiter.Allow() {
-					// 如果限制器允许请求，说明可能长时间未使用，删除它
+					// Nếu bộ giới hạn cho phép yêu cầu thì có thể nó đã lâu không được sử dụng, hãy xóa nó đi
 					delete(rl.limiters, ip)
 				}
 			}
@@ -63,18 +63,18 @@ func (rl *RateLimiter) cleanupLimiters() {
 	}()
 }
 
-// Middleware 速率限制中间件
+// Phần mềm trung gian giới hạn tốc độ phần mềm trung gian
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
-	// 如果限速器未启用，直接跳过
+	// Nếu bộ giới hạn tốc độ không được bật, hãy trực tiếp bỏ qua nó
 	if !rl.enabled {
 		return next
 	}
 
-	// 启动清理协程
+	// Bắt đầu coroutine dọn dẹp
 	rl.cleanupLimiters()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 检查连接数限制
+		// Kiểm tra giới hạn kết nối
 		rl.connMu.Lock()
 		if rl.connCount >= int32(rl.maxConns) {
 			rl.connMu.Unlock()
@@ -84,20 +84,20 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		rl.connCount++
 		rl.connMu.Unlock()
 
-		// 连接结束时减少计数
+		// Số lượng giảm khi kết nối kết thúc
 		defer func() {
 			rl.connMu.Lock()
 			rl.connCount--
 			rl.connMu.Unlock()
 		}()
 
-		// 获取客户端IP
+		// Nhận IP của khách hàng
 		ip := r.RemoteAddr
 		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
 			ip = forwarded
 		}
 
-		// 检查速率限制
+		// Kiểm tra giới hạn tỷ lệ
 		limiter := rl.getLimiter(ip)
 		if !limiter.Allow() {
 			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
@@ -108,12 +108,12 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// GetStats 获取统计信息
+// GetStatsNhận số liệu thống kê
 func (rl *RateLimiter) GetStats() map[string]interface{} {
-	// 使用原子操作获取连接数
+	// Nhận số lượng kết nối bằng các hoạt động nguyên tử
 	currentConns := atomic.LoadInt32(&rl.connCount)
 
-	// 只对limiters map使用读锁
+	// Chỉ sử dụng khóa đọc trên bản đồ giới hạn
 	rl.mu.RLock()
 	activeLimiters := len(rl.limiters)
 	rl.mu.RUnlock()

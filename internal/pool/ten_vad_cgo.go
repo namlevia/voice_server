@@ -16,16 +16,16 @@ import (
 	"unsafe"
 )
 
-// TenVADDLL TEN-VAD的动态库绑定（当前为占位符）
+// Liên kết thư viện động của TenVADDLL TEN-VAD (hiện là trình giữ chỗ)
 type TenVADDLL struct{}
 
-// 全局单例
+// Đơn vị toàn cầu
 var (
 	globalTenVAD *TenVADDLL
 	once         sync.Once
 )
 
-// GetInstance 创建并返回 TEN-VAD 动态库单例
+// GetInstance tạo và trả về đơn thư viện động TEN-VAD
 func GetInstance() *TenVADDLL {
 	once.Do(func() {
 		globalTenVAD = &TenVADDLL{}
@@ -33,7 +33,7 @@ func GetInstance() *TenVADDLL {
 	return globalTenVAD
 }
 
-// CreateInstance 创建TEN-VAD实例（共享模型）
+// CreateInstance tạo phiên bản TEN-VAD (mô hình chia sẻ)
 func (t *TenVADDLL) CreateInstance(hopSize int, threshold float32) (unsafe.Pointer, error) {
 	var handle C.ten_vad_handle_t
 	ret := C.ten_vad_create(&handle, C.size_t(hopSize), C.float(threshold))
@@ -43,7 +43,7 @@ func (t *TenVADDLL) CreateInstance(hopSize int, threshold float32) (unsafe.Point
 	return unsafe.Pointer(handle), nil
 }
 
-// ProcessAudio 处理音频数据
+// ProcessAudio xử lý dữ liệu âm thanh
 func (t *TenVADDLL) ProcessAudio(handle unsafe.Pointer, audioData []int16) (float32, int32, error) {
 	if handle == nil {
 		return 0, 0, errors.New("nil handle for ten-vad process")
@@ -66,7 +66,7 @@ func (t *TenVADDLL) ProcessAudio(handle unsafe.Pointer, audioData []int16) (floa
 	return float32(prob), int32(flag), nil
 }
 
-// DestroyInstance 销毁TEN-VAD实例
+// DestroyInstance hủy phiên bản TEN-VAD
 func (t *TenVADDLL) DestroyInstance(handle unsafe.Pointer) error {
 	if handle == nil {
 		return errors.New("nil handle for destroy")
@@ -79,7 +79,7 @@ func (t *TenVADDLL) DestroyInstance(handle unsafe.Pointer) error {
 	return nil
 }
 
-// GetVersion 获取TEN-VAD版本
+// GetVersion Lấy phiên bản TEN-VAD
 func (t *TenVADDLL) GetVersion() string {
 	ver := C.ten_vad_get_version()
 	return C.GoString(ver)

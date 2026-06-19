@@ -11,7 +11,7 @@ import (
 
 var Logger *slog.Logger
 
-// InitLogger 初始化日志系统，支持轮转和多输出
+// InitLogger khởi tạo hệ thống nhật ký và hỗ trợ xoay vòng và nhiều đầu ra
 func InitLogger(level slog.Level, format, output, filePath string, maxSize, maxBackups, maxAge int, compress bool) {
 	var writers []io.Writer
 	if output == "console" || output == "both" {
@@ -94,7 +94,7 @@ func parseSlogLevel(level string) slog.Level {
 	}
 }
 
-// InitLoggerFromConfig 直接用LoggingConfig结构体初始化logger
+// InitLoggerFromConfig trực tiếp sử dụng cấu trúc LoggingConfig để khởi tạo trình ghi nhật ký.
 func InitLoggerFromConfig(cfg LoggingConfig) {
 	InitLogger(
 		parseSlogLevel(cfg.Level),

@@ -1,55 +1,55 @@
 package pool
 
-// VADPoolInterface VAD池接口
+// VADPoolInterface Giao diện VAD pool
 type VADPoolInterface interface {
-	// Initialize 初始化池
+	// Khởi tạo nhóm khởi tạo
 	Initialize() error
 
-	// Get 获取VAD实例
+	// Nhận phiên bản VAD
 	Get() (VADInstanceInterface, error)
 
-	// Put 归还VAD实例
+	// Put trả về phiên bản VAD
 	Put(instance VADInstanceInterface)
 
-	// GetStats 获取统计信息
+	// GetStatsNhận số liệu thống kê
 	GetStats() map[string]interface{}
 
-	// Shutdown 关闭池
+	// Tắt máy đóng hồ bơi
 	Shutdown()
 }
 
-// VADInstanceInterface VAD实例接口
+// VADInstanceInterface Giao diện phiên bản VAD
 type VADInstanceInterface interface {
-	// GetID 获取实例ID
+	// GetID Lấy ID phiên bản
 	GetID() int
 
-	// GetType 获取VAD类型
+	// GetType lấy loại VAD
 	GetType() string
 
-	// IsInUse 检查是否在使用中
+	// IsInUse kiểm tra xem nó có được sử dụng không
 	IsInUse() bool
 
-	// SetInUse 设置使用状态
+	// SetInUse đặt trạng thái sử dụng
 	SetInUse(inUse bool)
 
-	// GetLastUsed 获取最后使用时间
+	// GetLastUsed Lấy thời gian sử dụng cuối cùng
 	GetLastUsed() int64
 
-	// SetLastUsed 设置最后使用时间
+	// SetLastUsed đặt thời gian sử dụng cuối cùng
 	SetLastUsed(timestamp int64)
 
-	// Reset 重置实例状态
+	// Đặt lại trạng thái đặt lại phiên bản
 	Reset() error
 
-	// Destroy 销毁实例
+	// Phá hủy phiên bản
 	Destroy() error
 }
 
-// VADPoolFactory VAD池工厂接口
+// VADPoolFactory Giao diện nhà máy VAD pool
 type VADPoolFactory interface {
-	// CreatePool 创建VAD池
+	// CreatePool tạo nhóm VAD
 	CreatePool(config interface{}) (VADPoolInterface, error)
 
-	// GetSupportedTypes 获取支持的VAD类型
+	// GetSupportedTypes Nhận các loại VAD được hỗ trợ
 	GetSupportedTypes() []string
 }

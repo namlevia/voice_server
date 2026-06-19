@@ -18,14 +18,14 @@ import (
 func main() {
 	fmt.Println("🔐 生成SSL证书...")
 
-	// 创建ssl目录
+	// Tạo thư mục ssl
 	sslDir := "../ssl"
 	if err := os.MkdirAll(sslDir, 0755); err != nil {
 		fmt.Printf("❌ 创建SSL目录失败: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 生成私钥
+	// Tạo khóa riêng
 	fmt.Println("🔑 生成ECDSA私钥...")
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -33,7 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 创建证书模板
+	// Tạo mẫu chứng chỉ
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -52,7 +52,7 @@ func main() {
 			PostalCode:    []string{},
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(365 * 24 * time.Hour), // 1年有效期
+		NotAfter:              time.Now().Add(365 * 24 * time.Hour), // hiệu lực 1 năm
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
@@ -60,7 +60,7 @@ func main() {
 		DNSNames:              []string{"localhost", "*.localhost"},
 	}
 
-	// 创建证书
+	// Tạo chứng chỉ
 	fmt.Println("📜 生成自签名证书...")
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
@@ -68,7 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 保存证书
+	// lưu chứng chỉ
 	certPath := filepath.Join(sslDir, "cert.pem")
 	certOut, err := os.Create(certPath)
 	if err != nil {
@@ -84,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 保存私钥
+	// lưu khóa riêng
 	keyPath := filepath.Join(sslDir, "key.pem")
 	keyOut, err := os.Create(keyPath)
 	if err != nil {
@@ -105,9 +105,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 设置文件权限（仅在类Unix系统上）
-	os.Chmod(keyPath, 0600)  // 私钥只有所有者可读
-	os.Chmod(certPath, 0644) // 证书可以被其他人读取
+	// Đặt quyền truy cập tệp (chỉ trên các hệ thống giống Unix)
+	os.Chmod(keyPath, 0600)  // Khóa riêng chỉ có chủ sở hữu mới có thể đọc được
+	os.Chmod(certPath, 0644) // Chứng chỉ có thể được đọc bởi người khác
 
 	fmt.Println("✅ SSL证书生成成功!")
 	fmt.Printf("📁 证书位置: %s\n", sslDir)

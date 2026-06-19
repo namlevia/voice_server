@@ -14,58 +14,58 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 )
 
-// VectorDatabase 向量数据库接口
-// 定义了向量数据库的统一操作接口，支持多种存储后端（Qdrant、JSON等）
+// Giao diện cơ sở dữ liệu vector VectorDatabase
+// Xác định giao diện hoạt động hợp nhất cho cơ sở dữ liệu vectơ và hỗ trợ nhiều phụ trợ lưu trữ (Qdrant, JSON, v.v.)
 type VectorDatabase interface {
-	// Init 初始化数据库
+	// Init khởi tạo cơ sở dữ liệu
 	Init() error
 
-	// Close 关闭数据库连接
+	// Đóng đóng kết nối cơ sở dữ liệu
 	Close() error
 
-	// Insert 插入声纹向量
+	// Chèn chèn vector dấu giọng nói
 	Insert(uid, agentID, speakerID, speakerName, uuid string, embedding []float32, sampleIndex int, createdAt, updatedAt int64) error
 
-	// Search 搜索相似向量（仅按 UID 过滤）
+	// Tìm kiếm Tìm kiếm các vectơ tương tự (chỉ lọc theo UID)
 	Search(uid string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error)
 
-	// SearchWithOptionalFilters 搜索相似向量（支持可选的 UID、agent_id、speaker_id 和 speaker_name 过滤）
+	// SearchWithOptionalFilters tìm kiếm các vectơ tương tự (hỗ trợ lọc UID, Agent_id, loa_id và loa_name tùy chọn)
 	SearchWithOptionalFilters(uid, agentID, speakerID, speakerName string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error)
 
-	// SearchWithFilter 搜索相似向量（严格按 UID、agent_id 和 speaker_id 过滤）
+	// SearchWithFilter tìm kiếm các vectơ tương tự (được lọc nghiêm ngặt theo UID, Agent_id và loa_id)
 	SearchWithFilter(uid, agentID, speakerID string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error)
 
-	// GetSpeakerSampleCount 获取说话人的样本数量
+	// GetSpeakerSampleCount Lấy số lượng mẫu của người nói
 	GetSpeakerSampleCount(uid, agentID, speakerID string) (int, error)
 
-	// GetSpeakerInfo 获取说话人信息
+	// GetSpeakerInfo Nhận thông tin người nói
 	GetSpeakerInfo(uid, agentID, speakerID string) (*SpeakerInfo, error)
 
-	// GetAllSpeakers 获取所有说话人列表
+	// GetAllSpeakers Lấy danh sách tất cả các diễn giả
 	GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, error)
 
-	// DeleteByFilters 删除说话人（通过过滤条件）
+	// DeleteByFilters xóa loa (thông qua điều kiện lọc)
 	DeleteByFilters(uid, agentID, speakerID string) error
 
-	// DeleteByUUID 通过 UUID 删除说话人
+	// DeleteByUUID Xóa loa bằng UUID
 	DeleteByUUID(uid, agentID, uuid string) error
 }
 
-// QdrantConfig Qdrant 配置
+// Cấu hình QdrantConfig Qdrant
 type QdrantConfig struct {
 	Host           string
 	Port           int
 	CollectionName string
 }
 
-// QdrantVectorDB Qdrant 向量数据库客户端
+// Máy khách cơ sở dữ liệu vectơ QdrantVectorDB Qdrant
 type QdrantVectorDB struct {
 	client         *qdrant.Client
 	collectionName string
 	embeddingDim   int
 }
 
-// SearchResult 搜索结果
+// Kết quả tìm kiếm Kết quả tìm kiếm
 type SearchResult struct {
 	SpeakerID   string
 	SpeakerName string
@@ -74,9 +74,9 @@ type SearchResult struct {
 	SampleIndex int
 }
 
-// NewQdrantVectorDB 创建 Qdrant 向量数据库客户端
+// NewQdrantVectorDB tạo máy khách cơ sở dữ liệu vector Qdrant
 func NewQdrantVectorDB(config *QdrantConfig, embeddingDim int) (*QdrantVectorDB, error) {
-	// 连接 Qdrant
+	// Kết nối Qdrant
 	client, err := qdrant.NewClient(&qdrant.Config{
 		Host: config.Host,
 		Port: config.Port,
@@ -94,27 +94,27 @@ func NewQdrantVectorDB(config *QdrantConfig, embeddingDim int) (*QdrantVectorDB,
 	return db, nil
 }
 
-// Init 初始化 Qdrant 向量数据库（确保 Collection 存在）
-// 实现 VectorDatabase 接口
+// Ban đầu khởi tạo cơ sở dữ liệu vectơ Qdrant (đảm bảo Bộ sưu tập tồn tại)
+// Triển khai giao diện VectorDatabase
 func (db *QdrantVectorDB) Init() error {
 	ctx := context.Background()
 	return db.ensureCollectionExists(ctx)
 }
 
-// normalizeVector 对向量进行 L2 归一化
-// 公式: v_normalized = v / ||v||
-// 当向量归一化后，点积 = 余弦相似度
+// normalizeVector L2 chuẩn hóa một vectơ
+// Công thức: v_normalized = v / ||v||
+// Khi vectơ được chuẩn hóa, tích số chấm = độ tương tự cosine
 func normalizeVector(v []float32) []float32 {
-	// 计算 L2 范数
+	// Tính định mức L2
 	var norm float32
 	for _, val := range v {
 		norm += val * val
 	}
 	norm = float32(math.Sqrt(float64(norm)))
 
-	// 归一化
+	// bình thường hóa
 	if norm == 0 {
-		return v // 零向量直接返回
+		return v // Vector 0 được trả về trực tiếp
 	}
 
 	normalized := make([]float32, len(v))
@@ -124,24 +124,24 @@ func normalizeVector(v []float32) []float32 {
 	return normalized
 }
 
-// generatePointID 生成唯一的 Point ID
+// generatePointID tạo ID điểm duy nhất
 func generatePointID(uid, agentID, speakerID string, sampleIndex int) uint64 {
 	hash := fnv.New64a()
 	hash.Write([]byte(fmt.Sprintf("%s:%s:%s:%d", uid, agentID, speakerID, sampleIndex)))
 	return hash.Sum64()
 }
 
-// ensureCollectionExists 确保 Collection 存在，如果不存在则创建
+// đảmCollectionExists đảm bảo rằng Bộ sưu tập tồn tại, tạo nó nếu nó không tồn tại
 func (db *QdrantVectorDB) ensureCollectionExists(ctx context.Context) error {
 	_, err := db.client.GetCollectionInfo(ctx, db.collectionName)
 	if err != nil {
-		// Collection 不存在，创建它
+		// Bộ sưu tập không tồn tại, hãy tạo nó
 		logger.Infof("Collection '%s' does not exist, creating it...", db.collectionName)
 		err = db.client.CreateCollection(ctx, &qdrant.CreateCollection{
 			CollectionName: db.collectionName,
 			VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
 				Size:     uint64(db.embeddingDim),
-				Distance: qdrant.Distance_Cosine, // 使用余弦距离（Qdrant 自动归一化）
+				Distance: qdrant.Distance_Cosine, // Sử dụng khoảng cách cosine (chuẩn hóa tự động Qdrant)
 			}),
 		})
 		if err != nil {
@@ -152,16 +152,16 @@ func (db *QdrantVectorDB) ensureCollectionExists(ctx context.Context) error {
 	return nil
 }
 
-// Insert 插入 embedding 到向量数据库；若 uid+agentID+uuid 已存在则更新该条（uuid 相同视为同一声纹）
+// Chèn phần chèn nhúng vào cơ sở dữ liệu vectơ; nếu uid+agentID+uuid đã tồn tại, hãy cập nhật mục nhập (cùng một uuid được coi là cùng một giọng nói)
 func (db *QdrantVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid string, embedding []float32, sampleIndex int, createdAt, updatedAt int64) error {
 	ctx := context.Background()
 
-	// 确保 Collection 存在（如果不存在则创建）
+	// Đảm bảo Bộ sưu tập tồn tại (tạo nó nếu nó không tồn tại)
 	if err := db.ensureCollectionExists(ctx); err != nil {
 		return fmt.Errorf("failed to ensure collection exists: %v", err)
 	}
 
-	// 先按 uuid 查是否已有该声纹（uid+agentID+uuid 唯一）
+	// Đầu tiên nhấn uuid để kiểm tra xem giọng nói đã tồn tại chưa (uid+agentID+uuid là duy nhất)
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 		qdrant.NewMatch("uuid", uuid),
@@ -183,7 +183,7 @@ func (db *QdrantVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid stri
 
 	var point *qdrant.PointStruct
 	if len(scrollResult) > 0 {
-		// uuid 已存在：用原 Point 的 Id 和 sample_index 做 Upsert（更新向量与 updated_at，保留 created_at）
+		// uuid đã tồn tại: sử dụng Id của Điểm ban đầu và sample_index để thực hiện Upsert (cập nhật vector và update_at, giữ lại create_at)
 		existing := scrollResult[0]
 		payload := existing.GetPayload()
 		useSampleIndex := sampleIndex
@@ -209,7 +209,7 @@ func (db *QdrantVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid stri
 			}),
 		}
 	} else {
-		// uuid 不存在：按 sample_index 生成新 PointId 插入
+		// uuid không tồn tại: tạo PointId mới bằng cách chèn sample_index
 		pointID := generatePointID(uid, agentID, speakerID, sampleIndex)
 		point = &qdrant.PointStruct{
 			Id:      qdrant.NewIDNum(pointID),
@@ -238,20 +238,20 @@ func (db *QdrantVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid stri
 	return nil
 }
 
-// Search 搜索相似向量（按 UID 过滤）
+// Tìm kiếm Tìm kiếm các vectơ tương tự (được lọc theo UID)
 func (db *QdrantVectorDB) Search(uid string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error) {
 	return db.SearchWithOptionalFilters(uid, "", "", "", queryEmbedding, threshold, topK)
 }
 
-// SearchWithOptionalFilters 搜索相似向量（支持可选的 UID、agent_id、speaker_id 和 speaker_name 过滤）
-// uid: 用户ID，如果为空字符串则不作为过滤条件
-// agentID: Agent ID，如果为空字符串则不作为过滤条件
-// speakerID: 说话人ID，如果为空字符串则不作为过滤条件
-// speakerName: 说话人名称，如果为空字符串则不作为过滤条件
+// SearchWithOptionalFilters tìm kiếm các vectơ tương tự (hỗ trợ lọc UID, Agent_id, loa_id và loa_name tùy chọn)
+// uid: ID người dùng, nếu là chuỗi rỗng thì sẽ không được dùng làm điều kiện lọc
+// ID đại lý: ID đại lý. Nếu là chuỗi rỗng thì nó sẽ không được sử dụng làm điều kiện lọc.
+// loaID: ID loa, nếu là chuỗi trống thì sẽ không được dùng làm điều kiện lọc
+// loaName: tên loa, nếu là chuỗi rỗng thì sẽ không được dùng làm điều kiện lọc
 func (db *QdrantVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, speakerName string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error) {
 	ctx := context.Background()
 
-	// 构建过滤条件（按 UID、agent_id、speaker_id 和 speaker_name 过滤，如果为空则不添加该条件）
+	// Xây dựng điều kiện lọc (lọc theo UID, Agent_id, loa_id và loa_name, nếu trống thì không thêm điều kiện)
 	conditions := make([]*qdrant.Condition, 0)
 	if uid != "" {
 		conditions = append(conditions, qdrant.NewMatch("uid", uid))
@@ -278,10 +278,10 @@ func (db *QdrantVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, spe
 		limit = 1
 	}
 
-	// 对 queryEmbedding 进行 L2 归一化（DOT 距离要求向量归一化）
+	// L2 chuẩn hóa truy vấnNhúng (Khoảng cách DOT yêu cầu chuẩn hóa vectơ)
 	normalizedQueryEmbedding := normalizeVector(queryEmbedding)
 
-	// 使用 Query API 搜索
+	// Tìm kiếm bằng API truy vấn
 	queryPoints := &qdrant.QueryPoints{
 		CollectionName: db.collectionName,
 		Query:          qdrant.NewQuery(normalizedQueryEmbedding...),
@@ -292,7 +292,7 @@ func (db *QdrantVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, spe
 		queryPoints.Filter = filter
 	}
 
-	// 打印 queryPoints 信息
+	// In thông tin queryPoints
 	logger.Debugf("QueryPoints: CollectionName=%s, Limit=%d, WithPayload=%v, QueryEmbeddingLen=%d",
 		queryPoints.CollectionName, *queryPoints.Limit, queryPoints.WithPayload, len(normalizedQueryEmbedding))
 	if filter != nil {
@@ -309,7 +309,7 @@ func (db *QdrantVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, spe
 		return nil, fmt.Errorf("failed to search: %v", err)
 	}
 
-	// 转换结果
+	// Kết quả chuyển đổi
 	results := make([]SearchResult, 0)
 	for _, point := range searchPoints {
 		if point.Payload == nil {
@@ -331,23 +331,23 @@ func (db *QdrantVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, spe
 			sampleIndex = int(val.GetIntegerValue())
 		}
 
-		// Query API 返回的 score 是余弦相似度（范围 [-1, 1]）
-		// 使用 Distance_Cosine 时，Qdrant 会自动归一化向量并计算余弦相似度
+		// Điểm được API truy vấn trả về là độ tương tự cosine (phạm vi [-1, 1])
+		// Khi sử dụng Distance_Cosine, Qdrant sẽ tự động chuẩn hóa các vectơ và tính toán độ tương tự cosine
 		score := float32(point.Score)
 
-		// 重要：Manager 的 cosineSimilarity() 直接返回余弦相似度（范围 [-1, 1]）
-		// 为了与 Manager 保持一致，Qdrant 也应该直接使用 score，不做转换
+		// Quan trọng: cosineSimilarity() của trình quản lý trả về trực tiếp độ tương tự cosine (phạm vi [-1, 1])
+		// Để nhất quán với Trình quản lý, Qdrant cũng nên sử dụng điểm trực tiếp mà không cần chuyển đổi.
 		var confidence float32
 		if score < -1 {
 			confidence = -1.0
 		} else if score > 1 {
 			confidence = 1.0
 		} else {
-			// 直接使用 score（范围 [-1, 1]），与 Manager 的余弦相似度保持一致
+			// Sử dụng điểm trực tiếp (phạm vi [-1, 1]), phù hợp với độ tương tự cosine của Người quản lý
 			confidence = score
 		}
 
-		// 应用阈值过滤
+		// Áp dụng lọc ngưỡng
 		if confidence < threshold {
 			continue
 		}
@@ -366,16 +366,16 @@ func (db *QdrantVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, spe
 	return results, nil
 }
 
-// SearchWithFilter 搜索相似向量（按 UID、agent_id 和 speaker_id 过滤）
+// SearchWithFilter tìm kiếm các vectơ tương tự (được lọc theo UID, Agent_id và loa_id)
 func (db *QdrantVectorDB) SearchWithFilter(uid, agentID, speakerID string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error) {
 	ctx := context.Background()
 
-	// 构建过滤条件（按 UID、agent_id 和 speaker_id 过滤）
+	// Xây dựng bộ lọc (lọc theo UID, Agent_id và loa_id)
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 		qdrant.NewMatch("speaker_id", speakerID),
 	}
-	// 如果 agentID 不为空，则添加到过滤条件
+	// Nếu ID tác nhân không trống, hãy thêm vào điều kiện lọc
 	if agentID != "" {
 		conditions = append(conditions, qdrant.NewMatch("agent_id", agentID))
 	}
@@ -388,10 +388,10 @@ func (db *QdrantVectorDB) SearchWithFilter(uid, agentID, speakerID string, query
 		limit = 1
 	}
 
-	// 注意：使用 Distance_Cosine 时，Qdrant 会自动对查询向量进行归一化
-	// 因此不需要在程序中手动归一化（即使传入的向量已经归一化，Qdrant 再次归一化也没问题）
+	// Lưu ý: Qdrant sẽ tự động chuẩn hóa vectơ truy vấn khi sử dụng Distance_Cosine
+	// Do đó, không cần phải chuẩn hóa thủ công trong chương trình (ngay cả khi vectơ đến đã được chuẩn hóa, Qdrant có thể chuẩn hóa lại mà không gặp vấn đề gì)
 
-	// 使用 Query API 搜索
+	// Tìm kiếm bằng API truy vấn
 	searchPoints, err := db.client.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: db.collectionName,
 		Query:          qdrant.NewQuery(queryEmbedding...),
@@ -403,7 +403,7 @@ func (db *QdrantVectorDB) SearchWithFilter(uid, agentID, speakerID string, query
 		return nil, fmt.Errorf("failed to search: %v", err)
 	}
 
-	// 转换结果（与 Search 方法相同）
+	// Kết quả chuyển đổi (giống như phương pháp Tìm kiếm)
 	results := make([]SearchResult, 0)
 	for _, point := range searchPoints {
 		if point.Payload == nil {
@@ -425,18 +425,18 @@ func (db *QdrantVectorDB) SearchWithFilter(uid, agentID, speakerID string, query
 			sampleIndex = int(val.GetIntegerValue())
 		}
 
-		// Query API 返回的 score 是余弦相似度（范围 [-1, 1]）
-		// 使用 Distance_Cosine 时，Qdrant 会自动归一化向量并计算余弦相似度
+		// Điểm được API truy vấn trả về là độ tương tự cosine (phạm vi [-1, 1])
+		// Khi sử dụng Distance_Cosine, Qdrant sẽ tự động chuẩn hóa các vectơ và tính toán độ tương tự cosine
 		score := float32(point.Score)
-		// 重要：Manager 的 cosineSimilarity() 直接返回余弦相似度（范围 [-1, 1]）
-		// 为了与 Manager 保持一致，Qdrant 也应该直接使用 score，不做转换
+		// Quan trọng: cosineSimilarity() của trình quản lý trả về trực tiếp độ tương tự cosine (phạm vi [-1, 1])
+		// Để nhất quán với Trình quản lý, Qdrant cũng nên sử dụng điểm trực tiếp mà không cần chuyển đổi.
 		var confidence float32
 		if score < -1 {
 			confidence = -1.0
 		} else if score > 1 {
 			confidence = 1.0
 		} else {
-			// 直接使用 score（范围 [-1, 1]），与 Manager 的余弦相似度保持一致
+			// Sử dụng điểm trực tiếp (phạm vi [-1, 1]), phù hợp với độ tương tự cosine của Người quản lý
 			confidence = score
 		}
 
@@ -458,16 +458,16 @@ func (db *QdrantVectorDB) SearchWithFilter(uid, agentID, speakerID string, query
 	return results, nil
 }
 
-// GetSpeakerSampleCount 获取说话人的样本数量
+// GetSpeakerSampleCount Lấy số lượng mẫu của người nói
 func (db *QdrantVectorDB) GetSpeakerSampleCount(uid, agentID, speakerID string) (int, error) {
 	ctx := context.Background()
 
-	// 使用 Scroll API 获取所有匹配的 points
+	// Nhận tất cả các điểm phù hợp bằng API cuộn
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 		qdrant.NewMatch("speaker_id", speakerID),
 	}
-	// 如果 agentID 不为空，则添加到过滤条件
+	// Nếu ID tác nhân không trống, hãy thêm vào điều kiện lọc
 	if agentID != "" {
 		conditions = append(conditions, qdrant.NewMatch("agent_id", agentID))
 	}
@@ -475,7 +475,7 @@ func (db *QdrantVectorDB) GetSpeakerSampleCount(uid, agentID, speakerID string) 
 		Must: conditions,
 	}
 
-	limit := uint32(10000) // 足够大的值
+	limit := uint32(10000) // giá trị đủ lớn
 	scrollResult, err := db.client.Scroll(ctx, &qdrant.ScrollPoints{
 		CollectionName: db.collectionName,
 		Filter:         filter,
@@ -489,16 +489,16 @@ func (db *QdrantVectorDB) GetSpeakerSampleCount(uid, agentID, speakerID string) 
 	return len(scrollResult), nil
 }
 
-// GetSpeakerInfo 获取说话人信息
+// GetSpeakerInfo Nhận thông tin người nói
 func (db *QdrantVectorDB) GetSpeakerInfo(uid, agentID, speakerID string) (*SpeakerInfo, error) {
 	ctx := context.Background()
 
-	// 使用 Scroll API 获取所有匹配的 points
+	// Nhận tất cả các điểm phù hợp bằng API cuộn
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 		qdrant.NewMatch("speaker_id", speakerID),
 	}
-	// 如果 agentID 不为空，则添加到过滤条件
+	// Nếu ID tác nhân không trống, hãy thêm vào điều kiện lọc
 	if agentID != "" {
 		conditions = append(conditions, qdrant.NewMatch("agent_id", agentID))
 	}
@@ -521,7 +521,7 @@ func (db *QdrantVectorDB) GetSpeakerInfo(uid, agentID, speakerID string) (*Speak
 		return nil, fmt.Errorf("speaker %s not found", speakerID)
 	}
 
-	// 从第一个 point 提取信息
+	// Trích xuất thông tin từ điểm đầu tiên
 	firstPoint := scrollResult[0]
 	payload := firstPoint.GetPayload()
 
@@ -532,7 +532,7 @@ func (db *QdrantVectorDB) GetSpeakerInfo(uid, agentID, speakerID string) (*Speak
 		speakerName = val.GetStringValue()
 	}
 
-	// 遍历所有 points，找到最早的 created_at 和最新的 updated_at
+	// Duyệt qua tất cả các điểm và tìm ra_at được tạo sớm nhất và được cập nhật_at mới nhất
 	for _, point := range scrollResult {
 		payload := point.GetPayload()
 		if val, ok := payload["created_at"]; ok {
@@ -565,15 +565,15 @@ func (db *QdrantVectorDB) GetSpeakerInfo(uid, agentID, speakerID string) (*Speak
 	}, nil
 }
 
-// GetAllSpeakers 获取指定 UID 和 Agent ID 的所有说话人列表
+// GetAllSpeakers Nhận danh sách tất cả các diễn giả có UID và ID tác nhân được chỉ định
 func (db *QdrantVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, error) {
 	ctx := context.Background()
 
-	// 使用 Scroll API 获取所有匹配的 points
+	// Nhận tất cả các điểm phù hợp bằng API cuộn
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 	}
-	// 如果 agentID 不为空，则添加到过滤条件
+	// Nếu ID tác nhân không trống, hãy thêm vào điều kiện lọc
 	if agentID != "" {
 		conditions = append(conditions, qdrant.NewMatch("agent_id", agentID))
 	}
@@ -592,7 +592,7 @@ func (db *QdrantVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, e
 		return nil, fmt.Errorf("failed to scroll points: %v", err)
 	}
 
-	// 按 speaker_id 聚合（注意：根据新设计，每个样本使用不同的 speaker_id，所以这里实际上每个 speaker_id 只有一个样本）
+	// Tổng hợp theo loa_id (lưu ý: theo thiết kế mới, mỗi mẫu sử dụng một loa_id khác nhau, vì vậy thực tế chỉ có một mẫu cho mỗi loa_id ở đây)
 	speakerMap := make(map[string]*SpeakerInfo)
 	for _, point := range scrollResult {
 		payload := point.GetPayload()
@@ -641,7 +641,7 @@ func (db *QdrantVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, e
 
 		info.SampleCount++
 
-		// 更新最早创建时间和最晚更新时间
+		// Cập nhật thời gian tạo sớm nhất và thời gian cập nhật mới nhất
 		if createdAt > 0 {
 			pointCreatedAt := time.Unix(createdAt, 0)
 			if info.CreatedAt.IsZero() || pointCreatedAt.Before(info.CreatedAt) {
@@ -656,7 +656,7 @@ func (db *QdrantVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, e
 		}
 	}
 
-	// 转换为切片
+	// Chuyển đổi thành lát
 	speakers := make([]*SpeakerInfo, 0, len(speakerMap))
 	for _, info := range speakerMap {
 		speakers = append(speakers, info)
@@ -665,17 +665,17 @@ func (db *QdrantVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, e
 	return speakers, nil
 }
 
-// DeleteByFilters 删除说话人的所有向量（通过过滤条件）
-// 实现 VectorDatabase 接口
+// DeleteByFilters xóa tất cả vectơ của loa (thông qua điều kiện lọc)
+// Triển khai giao diện VectorDatabase
 func (db *QdrantVectorDB) DeleteByFilters(uid, agentID, speakerID string) error {
 	ctx := context.Background()
 
-	// 使用 Scroll API 获取所有匹配的 points
+	// Nhận tất cả các điểm phù hợp bằng API cuộn
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 		qdrant.NewMatch("speaker_id", speakerID),
 	}
-	// 如果 agentID 不为空，则添加到过滤条件
+	// Nếu ID tác nhân không trống, hãy thêm vào điều kiện lọc
 	if agentID != "" {
 		conditions = append(conditions, qdrant.NewMatch("agent_id", agentID))
 	}
@@ -688,23 +688,23 @@ func (db *QdrantVectorDB) DeleteByFilters(uid, agentID, speakerID string) error 
 		CollectionName: db.collectionName,
 		Filter:         filter,
 		Limit:          &limit,
-		WithPayload:    qdrant.NewWithPayload(false), // 不需要 payload
+		WithPayload:    qdrant.NewWithPayload(false), // Không cần tải trọng
 	})
 	if err != nil {
 		return fmt.Errorf("failed to scroll points: %v", err)
 	}
 
 	if len(scrollResult) == 0 {
-		return nil // 没有数据需要删除
+		return nil // Không có dữ liệu cần phải xóa
 	}
 
-	// 提取所有 Point IDs
+	// Trích xuất tất cả ID điểm
 	ids := make([]*qdrant.PointId, 0, len(scrollResult))
 	for _, point := range scrollResult {
 		ids = append(ids, point.Id)
 	}
 
-	// 删除这些 points
+	// Xóa những điểm này
 	_, err = db.client.Delete(ctx, &qdrant.DeletePoints{
 		CollectionName: db.collectionName,
 		Points: &qdrant.PointsSelector{
@@ -722,17 +722,17 @@ func (db *QdrantVectorDB) DeleteByFilters(uid, agentID, speakerID string) error 
 	return nil
 }
 
-// DeleteByUUID 通过 UUID 删除说话人的所有向量
-// 实现 VectorDatabase 接口
+// DeleteByUUID xóa tất cả vectơ của người nói bằng UUID
+// Triển khai giao diện VectorDatabase
 func (db *QdrantVectorDB) DeleteByUUID(uid, agentID, uuid string) error {
 	ctx := context.Background()
 
-	// 使用 Scroll API 获取所有匹配的 points（按 uuid 过滤）
+	// Sử dụng API cuộn để nhận tất cả các điểm phù hợp (được lọc theo uuid)
 	conditions := []*qdrant.Condition{
 		qdrant.NewMatch("uid", uid),
 		qdrant.NewMatch("uuid", uuid),
 	}
-	// 如果 agentID 不为空，则添加到过滤条件
+	// Nếu ID tác nhân không trống, hãy thêm vào điều kiện lọc
 	if agentID != "" {
 		conditions = append(conditions, qdrant.NewMatch("agent_id", agentID))
 	}
@@ -745,7 +745,7 @@ func (db *QdrantVectorDB) DeleteByUUID(uid, agentID, uuid string) error {
 		CollectionName: db.collectionName,
 		Filter:         filter,
 		Limit:          &limit,
-		WithPayload:    qdrant.NewWithPayload(false), // 不需要 payload
+		WithPayload:    qdrant.NewWithPayload(false), // Không cần tải trọng
 	})
 	if err != nil {
 		return fmt.Errorf("failed to scroll points: %v", err)
@@ -755,13 +755,13 @@ func (db *QdrantVectorDB) DeleteByUUID(uid, agentID, uuid string) error {
 		return fmt.Errorf("speaker with uuid %s not found for uid %s", uuid, uid)
 	}
 
-	// 提取所有 Point IDs
+	// Trích xuất tất cả ID điểm
 	ids := make([]*qdrant.PointId, 0, len(scrollResult))
 	for _, point := range scrollResult {
 		ids = append(ids, point.Id)
 	}
 
-	// 删除这些 points
+	// Xóa những điểm này
 	_, err = db.client.Delete(ctx, &qdrant.DeletePoints{
 		CollectionName: db.collectionName,
 		Points: &qdrant.PointsSelector{
@@ -779,13 +779,13 @@ func (db *QdrantVectorDB) DeleteByUUID(uid, agentID, uuid string) error {
 	return nil
 }
 
-// Close 关闭向量数据库连接
+// Đóng Đóng kết nối cơ sở dữ liệu vector
 func (db *QdrantVectorDB) Close() error {
-	// Qdrant Go Client 可能不需要显式关闭，但保留接口以便未来扩展
+	// Qdrant Go Client có thể không cần phải đóng một cách rõ ràng nhưng giao diện vẫn được giữ lại để mở rộng trong tương lai
 	return nil
 }
 
-// parseQdrantAddress 解析 Qdrant 地址（格式：host:port 或 host）
+// parsQdrantAddress phân tích địa chỉ Qdrant (định dạng: máy chủ: cổng hoặc máy chủ)
 func parseQdrantAddress(addr string) (string, int) {
 	host := "localhost"
 	port := 6334

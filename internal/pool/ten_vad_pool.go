@@ -11,7 +11,7 @@ import (
 	"voice_server/internal/logger"
 )
 
-// TenVADConfig TEN-VAD配置
+// Cấu hình TenVADConfig TEN-VAD
 type TenVADConfig struct {
 	HopSize   int
 	Threshold float32
@@ -19,7 +19,7 @@ type TenVADConfig struct {
 	MaxIdle   int
 }
 
-// TenVADInstance TEN-VAD实例
+// Phiên bản TenVADInstance TEN-VAD
 type TenVADInstance struct {
 	ID       int
 	Handle   unsafe.Pointer
@@ -28,22 +28,22 @@ type TenVADInstance struct {
 	mu       sync.RWMutex
 }
 
-// GetID 获取实例ID
+// GetID Lấy ID phiên bản
 func (i *TenVADInstance) GetID() int {
 	return i.ID
 }
 
-// GetType 获取VAD类型
+// GetType lấy loại VAD
 func (i *TenVADInstance) GetType() string {
 	return TEN_VAD_TYPE
 }
 
-// IsInUse 检查是否在使用中
+// IsInUse kiểm tra xem nó có được sử dụng không
 func (i *TenVADInstance) IsInUse() bool {
 	return atomic.LoadInt32(&i.InUse) == 1
 }
 
-// SetInUse 设置使用状态
+// SetInUse đặt trạng thái sử dụng
 func (i *TenVADInstance) SetInUse(inUse bool) {
 	if inUse {
 		atomic.StoreInt32(&i.InUse, 1)
@@ -52,27 +52,27 @@ func (i *TenVADInstance) SetInUse(inUse bool) {
 	}
 }
 
-// GetLastUsed 获取最后使用时间
+// GetLastUsed Lấy thời gian sử dụng cuối cùng
 func (i *TenVADInstance) GetLastUsed() int64 {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.LastUsed
 }
 
-// SetLastUsed 设置最后使用时间
+// SetLastUsed đặt thời gian sử dụng cuối cùng
 func (i *TenVADInstance) SetLastUsed(timestamp int64) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.LastUsed = timestamp
 }
 
-// Reset 重置实例状态
+// Đặt lại trạng thái đặt lại phiên bản
 func (i *TenVADInstance) Reset() error {
-	// TEN-VAD不需要重置，每次处理都是独立的
+	// TEN-VAD không cần thiết lập lại, mỗi quá trình xử lý đều độc lập
 	return nil
 }
 
-// Destroy 销毁实例
+// Phá hủy phiên bản
 func (i *TenVADInstance) Destroy() error {
 	if i.Handle != nil {
 		tenVAD := GetInstance()
@@ -83,24 +83,24 @@ func (i *TenVADInstance) Destroy() error {
 	return nil
 }
 
-// TenVADPool TEN-VAD资源池
+// Nhóm tài nguyên TenVADPool TEN-VAD
 type TenVADPool struct {
 	instances []*TenVADInstance
 	available chan VADInstanceInterface
 	config    *TenVADConfig
 
-	// 统计信息
+	// Thống kê
 	totalCreated int64
 	totalReused  int64
 	totalActive  int64
 
-	// 控制
+	// điều khiển
 	mu     sync.RWMutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// NewTenVADPool 创建新的TEN-VAD资源池
+// NewTenVADPool tạo nhóm tài nguyên TEN-VAD mới
 func NewTenVADPool(config *TenVADConfig) *TenVADPool {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -115,11 +115,11 @@ func NewTenVADPool(config *TenVADConfig) *TenVADPool {
 	return pool
 }
 
-// Initialize 并行初始化VAD池
+// Khởi tạo khởi tạo nhóm VAD song song
 func (p *TenVADPool) Initialize() error {
 	logger.Infof("🔧 Initializing TEN-VAD pool with %d instances...", p.config.PoolSize)
 
-	// 并行初始化VAD实例
+	// Khởi tạo song song các phiên bản VAD
 	var initWg sync.WaitGroup
 	errorChan := make(chan error, p.config.PoolSize)
 
@@ -128,7 +128,7 @@ func (p *TenVADPool) Initialize() error {
 		go func(instanceID int) {
 			defer initWg.Done()
 
-			// 创建TEN-VAD实例
+			// Tạo phiên bản TEN-VAD
 			tenVAD := GetInstance()
 			handle, err := tenVAD.CreateInstance(p.config.HopSize, p.config.Threshold)
 			if err != nil {
@@ -147,13 +147,13 @@ func (p *TenVADPool) Initialize() error {
 			p.instances = append(p.instances, instance)
 			p.mu.Unlock()
 
-			// 放入可用队列
+			// đưa vào hàng đợi có sẵn
 			select {
 			case p.available <- instance:
 				atomic.AddInt64(&p.totalCreated, 1)
 				logger.Infof("✅ TEN-VAD instance %d initialized", instanceID)
 			default:
-				// 队列满，销毁实例
+				// Hàng đợi đã đầy và phiên bản bị hủy
 				tenVAD.DestroyInstance(handle)
 				errorChan <- fmt.Errorf("TEN-VAD pool queue full, instance %d discarded", instanceID)
 			}
@@ -163,7 +163,7 @@ func (p *TenVADPool) Initialize() error {
 	initWg.Wait()
 	close(errorChan)
 
-	// 检查初始化错误
+	// Kiểm tra lỗi khởi tạo
 	var initErrors []error
 	for err := range errorChan {
 		if err != nil {
@@ -182,7 +182,7 @@ func (p *TenVADPool) Initialize() error {
 	return nil
 }
 
-// Get 获取VAD实例
+// Nhận phiên bản VAD
 func (p *TenVADPool) Get() (VADInstanceInterface, error) {
 	logger.Infof("🔍 Attempting to get TEN-VAD instance from pool (available: %d)", len(p.available))
 
@@ -196,15 +196,15 @@ func (p *TenVADPool) Get() (VADInstanceInterface, error) {
 			logger.Infof("✅ TEN-VAD instance %d marked as in-use (active: %d)", instance.GetID(), atomic.LoadInt64(&p.totalActive))
 			return instance, nil
 		}
-		// 实例已被使用，重新放回队列
+		// Phiên bản đã được sử dụng và được đưa trở lại hàng đợi.
 		logger.Warnf("⚠️ TEN-VAD instance %d already in use, returning to pool", instance.GetID())
 		select {
 		case p.available <- instance:
 		default:
 		}
-		return p.Get() // 递归重试
+		return p.Get() // thử lại đệ quy
 	case <-time.After(100 * time.Millisecond):
-		// 超时，创建新实例
+		// Hết thời gian chờ, tạo phiên bản mới
 		logger.Warnf("⏰ TEN-VAD pool timeout, creating new temporary instance")
 		return p.createNewInstance()
 	case <-p.ctx.Done():
@@ -213,7 +213,7 @@ func (p *TenVADPool) Get() (VADInstanceInterface, error) {
 	}
 }
 
-// Put 归还VAD实例
+// Put trả về phiên bản VAD
 func (p *TenVADPool) Put(instance VADInstanceInterface) {
 	if instance == nil {
 		logger.Warnf("⚠️ Attempted to put nil TEN-VAD instance")
@@ -227,17 +227,17 @@ func (p *TenVADPool) Put(instance VADInstanceInterface) {
 		atomic.AddInt64(&p.totalActive, -1)
 		logger.Infof("✅ TEN-VAD instance %d marked as available (active: %d)", instance.GetID(), atomic.LoadInt64(&p.totalActive))
 
-		// 重置VAD状态
+		// Đặt lại trạng thái VAD
 		if err := instance.Reset(); err != nil {
 			logger.Warnf("⚠️ Failed to reset TEN-VAD instance %d: %v", instance.GetID(), err)
 		}
 
 		select {
 		case p.available <- instance:
-			// 成功归还
+			// Đã trả lại thành công
 			logger.Infof("✅ TEN-VAD instance %d returned to pool (available: %d)", instance.GetID(), len(p.available))
 		default:
-			// 队列满，销毁实例
+			// Hàng đợi đã đầy và phiên bản bị hủy
 			logger.Warnf("⚠️ TEN-VAD pool queue full, destroying instance %d", instance.GetID())
 			instance.Destroy()
 		}
@@ -246,7 +246,7 @@ func (p *TenVADPool) Put(instance VADInstanceInterface) {
 	}
 }
 
-// createNewInstance 创建新的VAD实例
+// createNewInstance tạo một phiên bản VAD mới
 func (p *TenVADPool) createNewInstance() (VADInstanceInterface, error) {
 	tenVAD := GetInstance()
 	handle, err := tenVAD.CreateInstance(p.config.HopSize, p.config.Threshold)
@@ -258,7 +258,7 @@ func (p *TenVADPool) createNewInstance() (VADInstanceInterface, error) {
 		Handle:   handle,
 		LastUsed: time.Now().UnixNano(),
 		InUse:    1,
-		ID:       -1, // 临时实例
+		ID:       -1, // ví dụ tạm thời
 	}
 
 	atomic.AddInt64(&p.totalCreated, 1)
@@ -268,7 +268,7 @@ func (p *TenVADPool) createNewInstance() (VADInstanceInterface, error) {
 	return instance, nil
 }
 
-// GetStats 获取统计信息
+// GetStatsNhận số liệu thống kê
 func (p *TenVADPool) GetStats() map[string]interface{} {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -285,18 +285,18 @@ func (p *TenVADPool) GetStats() map[string]interface{} {
 	}
 }
 
-// Shutdown 关闭VAD池
+// Tắt máy sẽ đóng nhóm VAD
 func (p *TenVADPool) Shutdown() {
 	logger.Infof("🛑 Shutting down TEN-VAD pool...")
 
-	// 取消上下文
+	// Hủy ngữ cảnh
 	p.cancel()
 
-	// 销毁所有实例
+	// Phá hủy tất cả các trường hợp
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// 清空可用队列
+	// Xóa hàng đợi có sẵn
 	for {
 		select {
 		case instance := <-p.available:
@@ -307,7 +307,7 @@ func (p *TenVADPool) Shutdown() {
 	}
 
 cleanup_instances:
-	// 销毁所有实例
+	// Phá hủy tất cả các trường hợp
 	for _, instance := range p.instances {
 		instance.Destroy()
 	}

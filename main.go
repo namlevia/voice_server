@@ -17,13 +17,13 @@ import (
 
 func main() {
 
-	// 加载配置
+	// Tải cấu hình
 	if err := config.InitConfig("config.json"); err != nil {
 		logger.Errorf("Failed to load configuration:%v", err)
 		os.Exit(1)
 	}
 
-	// 设置日志级别
+	// Đặt cấp độ nhật ký
 	logger.InitLoggerFromConfig(logger.LoggingConfig{
 		Level:      config.GlobalConfig.Logging.Level,
 		Format:     config.GlobalConfig.Logging.Format,
@@ -37,24 +37,24 @@ func main() {
 	logger.Infof("✅ Configuration loaded")
 	config.PrintConfig()
 
-	// 初始化所有依赖
+	// Khởi tạo tất cả các phụ thuộc
 	deps, err := bootstrap.InitApp(&config.GlobalConfig)
 	if err != nil {
 		logger.Errorf("Failed to initialize app dependencies:%v", err)
 		os.Exit(1)
 	}
 
-	// 统一注册所有路由
+	// Đăng ký tất cả các tuyến đường thống nhất
 	r := router.NewRouter(deps)
 
-	// 创建HTTP服务器
+	// Tạo máy chủ HTTP
 	server := &http.Server{
 		Addr:        fmt.Sprintf("%s:%d", config.GlobalConfig.Server.Host, config.GlobalConfig.Server.Port),
 		Handler:     deps.RateLimiter.Middleware(r),
 		ReadTimeout: time.Duration(config.GlobalConfig.Server.ReadTimeout) * time.Second,
 	}
 
-	// 优雅关闭
+	// đóng cửa duyên dáng
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

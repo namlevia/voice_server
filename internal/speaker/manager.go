@@ -14,55 +14,55 @@ import (
 	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 )
 
-// Manager 声纹识别管理器
+// Trình quản lý Trình quản lý nhận dạng giọng nói
 type Manager struct {
 	extractor    *sherpa.SpeakerEmbeddingExtractor
 	threshold    float32
 	embeddingDim int
 	dataDir      string
 
-	// 向量数据库客户端（支持多种后端：JSON、Qdrant）
+	// Máy khách cơ sở dữ liệu vectơ (hỗ trợ nhiều chương trình phụ trợ: JSON, Qdrant)
 	vectorDB      VectorDatabase
 	vectorDBMutex sync.RWMutex
 
-	// VAD池（用于过滤静音）
+	// Nhóm VAD (để lọc sự im lặng)
 	vadPool pool.VADPoolInterface
 }
 
-// Config 声纹识别配置
+// Cấu hình cấu hình nhận dạng giọng nói
 type Config struct {
 	ModelPath  string  `json:"model_path"`
 	NumThreads int     `json:"num_threads"`
 	Provider   string  `json:"provider"`
 	Threshold  float32 `json:"threshold"`
-	DataDir    string  `json:"data_dir"` // 保留用于其他用途（如临时文件）
+	DataDir    string  `json:"data_dir"` // Dành riêng cho các mục đích sử dụng khác (chẳng hạn như các tệp tạm thời)
 
-	// 存储类型: "json" 或 "qdrant"（默认: "json"）
+	// Loại bộ nhớ: "json" hoặc "qdrant" (mặc định: "json")
 	StorageType string `json:"storage_type"`
 
-	// JSON 存储配置
+	// Cấu hình lưu trữ JSON
 	JSONStorage struct {
-		FilePath string `json:"file_path"` // JSON 文件路径
+		FilePath string `json:"file_path"` // Đường dẫn tệp JSON
 	} `json:"json_storage"`
 
-	// Qdrant 存储配置
+	// Cấu hình lưu trữ Qdrant
 	Qdrant struct {
-		Host           string `json:"host"`            // Qdrant 地址，默认 localhost
-		Port           int    `json:"port"`            // Qdrant 端口，默认 6334
-		CollectionName string `json:"collection_name"` // Collection 名称，默认 speaker_embeddings
+		Host           string `json:"host"`            // Địa chỉ Qdrant, localhost mặc định
+		Port           int    `json:"port"`            // Cổng Qdrant, mặc định 6334
+		CollectionName string `json:"collection_name"` // Tên bộ sưu tập, loa_embeddings mặc định
 	} `json:"qdrant"`
 }
 
-// NewManager 创建声纹识别管理器
+// NewManager tạo trình quản lý nhận dạng giọng nói
 func NewManager(config *Config, vadPool pool.VADPoolInterface) (*Manager, error) {
-	// 确保数据目录存在（用于其他用途，如临时文件）
+	// Đảm bảo thư mục dữ liệu tồn tại (cho các mục đích khác như tệp tạm thời)
 	if config.DataDir != "" {
 		if err := os.MkdirAll(config.DataDir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create data directory: %v", err)
 		}
 	}
 
-	// 创建声纹特征提取器配置
+	// Tạo cấu hình trích xuất tính năng giọng nói
 	extractorConfig := &sherpa.SpeakerEmbeddingExtractorConfig{
 		Model:      config.ModelPath,
 		NumThreads: config.NumThreads,
@@ -70,20 +70,20 @@ func NewManager(config *Config, vadPool pool.VADPoolInterface) (*Manager, error)
 		Provider:   config.Provider,
 	}
 
-	// 创建声纹特征提取器
+	// Tạo trình trích xuất tính năng giọng nói
 	extractor := sherpa.NewSpeakerEmbeddingExtractor(extractorConfig)
 	if extractor == nil {
 		return nil, fmt.Errorf("failed to create speaker embedding extractor")
 	}
 
-	// 获取特征维度
+	// Nhận kích thước tính năng
 	dim := extractor.Dim()
 	logger.Infof("Speaker embedding dimension: %d", dim)
 
-	// 根据配置选择存储后端
+	// Chọn phụ trợ lưu trữ dựa trên cấu hình
 	var vectorDB VectorDatabase
 
-	// 默认使用 json
+	// Sử dụng json theo mặc định
 	storageType := config.StorageType
 	if storageType == "" {
 		storageType = "json"
@@ -91,7 +91,7 @@ func NewManager(config *Config, vadPool pool.VADPoolInterface) (*Manager, error)
 
 	switch storageType {
 	case "json":
-		// JSON 文件存储
+		// Lưu trữ tệp JSON
 		jsonFilePath := config.JSONStorage.FilePath
 		if jsonFilePath == "" {
 			jsonFilePath = filepath.Join(config.DataDir, "speaker_embeddings.json")
@@ -108,14 +108,14 @@ func NewManager(config *Config, vadPool pool.VADPoolInterface) (*Manager, error)
 		logger.Infof("✅ Using JSON storage: %s", jsonFilePath)
 
 	case "qdrant":
-		// Qdrant 向量数据库
+		// Cơ sở dữ liệu vectơ Qdrant
 		qdrantConfig := &QdrantConfig{
 			Host:           config.Qdrant.Host,
 			Port:           config.Qdrant.Port,
 			CollectionName: config.Qdrant.CollectionName,
 		}
 
-		// 设置默认值
+		// Đặt giá trị mặc định
 		if qdrantConfig.Host == "" {
 			qdrantConfig.Host = "localhost"
 		}
@@ -131,7 +131,7 @@ func NewManager(config *Config, vadPool pool.VADPoolInterface) (*Manager, error)
 			return nil, fmt.Errorf("failed to initialize Qdrant vector database: %v", err)
 		}
 
-		// 初始化 Qdrant（确保 Collection 存在）
+		// Khởi tạo Qdrant (đảm bảo Bộ sưu tập tồn tại)
 		if err := qdrantDB.Init(); err != nil {
 			return nil, fmt.Errorf("failed to initialize Qdrant: %v", err)
 		}
@@ -157,14 +157,14 @@ func NewManager(config *Config, vadPool pool.VADPoolInterface) (*Manager, error)
 	return manager, nil
 }
 
-// Close 关闭管理器并释放资源
+// Đóng đóng trình quản lý và giải phóng tài nguyên
 func (m *Manager) Close() {
-	// 关闭向量数据库连接
+	// Đóng kết nối cơ sở dữ liệu vector
 	if m.vectorDB != nil {
 		m.vectorDB.Close()
 	}
 
-	// 释放提取器
+	// giải nén phát hành
 	if m.extractor != nil {
 		sherpa.DeleteSpeakerEmbeddingExtractor(m.extractor)
 	}
@@ -172,48 +172,48 @@ func (m *Manager) Close() {
 	logger.Infof("Speaker Manager closed, all resources released")
 }
 
-// extractEmbedding 从音频数据提取声纹特征（私有方法）
+// extractEmbedding trích xuất các tính năng giọng nói từ dữ liệu âm thanh (phương pháp riêng tư)
 func (m *Manager) extractEmbedding(audioData []float32, sampleRate int) ([]float32, error) {
-	// 创建音频流
+	// Tạo luồng âm thanh
 	stream := m.extractor.CreateStream()
 	defer sherpa.DeleteOnlineStream(stream)
 
-	// 接受音频数据
+	// Chấp nhận dữ liệu âm thanh
 	stream.AcceptWaveform(sampleRate, audioData)
 	stream.InputFinished()
 
-	// 检查是否准备就绪
+	// Kiểm tra xem nó đã sẵn sàng chưa
 	if !m.extractor.IsReady(stream) {
 		return nil, fmt.Errorf("insufficient audio data for embedding extraction")
 	}
 
-	// 提取特征
+	// Trích xuất tính năng
 	embedding := m.extractor.Compute(stream)
 	if len(embedding) == 0 {
 		return nil, fmt.Errorf("failed to extract embedding")
 	}
 
-	// 注意：不需要手动归一化向量
-	// Qdrant 在使用 Distance_Cosine 时会自动归一化向量（存储和查询时都会自动处理）
-	// 这样可以确保向量存储和搜索的一致性，并提高搜索效率
+	// LƯU Ý: Không cần chuẩn hóa vectơ theo cách thủ công
+	// Qdrant sẽ tự động chuẩn hóa các vectơ khi sử dụng Distance_Cosine (cả được lưu trữ và truy vấn tự động)
+	// Điều này đảm bảo tính nhất quán trong việc lưu trữ và tìm kiếm vectơ, đồng thời cải thiện hiệu quả tìm kiếm
 
 	return embedding, nil
 }
 
-// filterSilenceWithVAD 使用TEN-VAD过滤静音，仅保留语音段
+// filterSilenceWithVAD Sử dụng TEN-VAD để lọc khoảng lặng và chỉ giữ lại các đoạn giọng nói
 func (m *Manager) filterSilenceWithVAD(audioData []float32, sampleRate int) ([]float32, error) {
 	if m.vadPool == nil {
 		return audioData, nil
 	}
 
-	// 获取VAD实例
+	// Nhận phiên bản VAD
 	vadInstance, err := m.vadPool.Get()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get VAD instance: %v", err)
 	}
 	defer m.vadPool.Put(vadInstance)
 
-	// 类型断言，确保是TEN-VAD实例
+	// Nhập xác nhận để đảm bảo đó là phiên bản TEN-VAD
 	tenVADInstance, ok := vadInstance.(*pool.TenVADInstance)
 	if !ok {
 		return nil, fmt.Errorf("VAD instance is not TEN-VAD type")
@@ -222,7 +222,7 @@ func (m *Manager) filterSilenceWithVAD(audioData []float32, sampleRate int) ([]f
 	hopSize := config.GlobalConfig.VAD.TenVAD.HopSize
 	var filteredAudio []float32
 
-	// 分帧处理音频
+	// Đóng khung âm thanh
 	for i := 0; i < len(audioData); i += hopSize {
 		end := i + hopSize
 		if end > len(audioData) {
@@ -230,10 +230,10 @@ func (m *Manager) filterSilenceWithVAD(audioData []float32, sampleRate int) ([]f
 		}
 		frame := audioData[i:end]
 
-		// 将float32转换为int16
+		// Chuyển đổi float32 sang int16
 		int16Frame := make([]int16, len(frame))
 		for j, f := range frame {
-			// 限制范围在[-1.0, 1.0]，然后转换为int16
+			// Giới hạn phạm vi ở [-1.0, 1.0] và sau đó chuyển đổi thành int16
 			if f > 1.0 {
 				f = 1.0
 			} else if f < -1.0 {
@@ -242,13 +242,13 @@ func (m *Manager) filterSilenceWithVAD(audioData []float32, sampleRate int) ([]f
 			int16Frame[j] = int16(f * 32768)
 		}
 
-		// 调用VAD处理
+		// Gọi xử lý VAD
 		_, flag, err := pool.GetInstance().ProcessAudio(tenVADInstance.Handle, int16Frame)
 		if err != nil {
 			return nil, fmt.Errorf("TEN-VAD ProcessAudio error: %v", err)
 		}
 
-		// flag == 1 表示语音，保留该帧；flag == 0 表示静音，丢弃
+		// flag == 1 nghĩa là lời nói, giữ nguyên khung; cờ == 0 có nghĩa là im lặng, loại bỏ nó
 		if flag == 1 {
 			filteredAudio = append(filteredAudio, frame...)
 		}
@@ -261,20 +261,20 @@ func (m *Manager) filterSilenceWithVAD(audioData []float32, sampleRate int) ([]f
 	return filteredAudio, nil
 }
 
-// filterSilenceWithVADKeepEdges 使用TEN-VAD过滤静音，保留前后100ms的静音
+// filterSilenceWithVADKeepEdges sử dụng TEN-VAD để lọc khoảng lặng và giữ lại khoảng lặng 100ms trước và sau
 func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate int) ([]float32, error) {
 	if m.vadPool == nil {
 		return audioData, nil
 	}
 
-	// 获取VAD实例
+	// Nhận phiên bản VAD
 	vadInstance, err := m.vadPool.Get()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get VAD instance: %v", err)
 	}
 	defer m.vadPool.Put(vadInstance)
 
-	// 类型断言，确保是TEN-VAD实例
+	// Nhập xác nhận để đảm bảo đó là phiên bản TEN-VAD
 	tenVADInstance, ok := vadInstance.(*pool.TenVADInstance)
 	if !ok {
 		return nil, fmt.Errorf("VAD instance is not TEN-VAD type")
@@ -282,10 +282,10 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 
 	hopSize := config.GlobalConfig.VAD.TenVAD.HopSize
 
-	// 计算100ms对应的采样点数
-	silenceSamples := int(float64(sampleRate) * 0.1) // 100ms = 0.1秒
+	// Tính số điểm lấy mẫu tương ứng với 100ms
+	silenceSamples := int(float64(sampleRate) * 0.1) // 100ms = 0,1 giây
 
-	// 记录每帧的VAD结果和位置
+	// Ghi lại kết quả và vị trí VAD cho từng khung hình
 	type frameInfo struct {
 		startIdx int
 		endIdx   int
@@ -294,7 +294,7 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 
 	var frames []frameInfo
 
-	// 分帧处理音频，记录每帧的VAD结果
+	// Xử lý âm thanh theo khung và ghi lại kết quả VAD của từng khung
 	for i := 0; i < len(audioData); i += hopSize {
 		end := i + hopSize
 		if end > len(audioData) {
@@ -302,10 +302,10 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 		}
 		frame := audioData[i:end]
 
-		// 将float32转换为int16
+		// Chuyển đổi float32 sang int16
 		int16Frame := make([]int16, len(frame))
 		for j, f := range frame {
-			// 限制范围在[-1.0, 1.0]，然后转换为int16
+			// Giới hạn phạm vi ở [-1.0, 1.0] và sau đó chuyển đổi thành int16
 			if f > 1.0 {
 				f = 1.0
 			} else if f < -1.0 {
@@ -314,13 +314,13 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 			int16Frame[j] = int16(f * 32768)
 		}
 
-		// 调用VAD处理
+		// Gọi xử lý VAD
 		_, flag, err := pool.GetInstance().ProcessAudio(tenVADInstance.Handle, int16Frame)
 		if err != nil {
 			return nil, fmt.Errorf("TEN-VAD ProcessAudio error: %v", err)
 		}
 
-		// flag == 1 表示语音，flag == 0 表示静音
+		// cờ == 1 nghĩa là phát biểu, cờ == 0 nghĩa là im lặng
 		frames = append(frames, frameInfo{
 			startIdx: i,
 			endIdx:   end,
@@ -328,7 +328,7 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 		})
 	}
 
-	// 找到第一个和最后一个语音帧的位置
+	// Tìm vị trí của khung lời nói đầu tiên và cuối cùng
 	firstSpeechIdx := -1
 	lastSpeechIdx := -1
 	for i, frame := range frames {
@@ -340,26 +340,26 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 		}
 	}
 
-	// 如果没有找到语音帧，返回空
+	// Nếu không tìm thấy khung giọng nói, trả về trống
 	if firstSpeechIdx == -1 {
 		logger.Debugf("VAD filtering: no speech detected, returning empty audio")
 		return []float32{}, nil
 	}
 
-	// 计算保留的起始和结束位置
-	// 第一个语音帧的起始位置减去100ms
+	// Tính toán vị trí bắt đầu và kết thúc của việc lưu giữ
+	// Vị trí bắt đầu của khung lời nói đầu tiên trừ 100ms
 	startIdx := frames[firstSpeechIdx].startIdx - silenceSamples
 	if startIdx < 0 {
 		startIdx = 0
 	}
 
-	// 最后一个语音帧的结束位置加上100ms
+	// Vị trí kết thúc của khung lời nói cuối cùng cộng thêm 100ms
 	endIdx := frames[lastSpeechIdx].endIdx + silenceSamples
 	if endIdx > len(audioData) {
 		endIdx = len(audioData)
 	}
 
-	// 提取保留的音频段
+	// Trích xuất các đoạn âm thanh được giữ lại
 	filteredAudio := audioData[startIdx:endIdx]
 
 	logger.Debugf("VAD filtering with edges: original %d samples, filtered %d samples (kept %.2f%%, first speech at %d, last speech at %d)",
@@ -370,22 +370,22 @@ func (m *Manager) filterSilenceWithVADKeepEdges(audioData []float32, sampleRate 
 	return filteredAudio, nil
 }
 
-// FilterSilenceWithVADKeepEdges 使用TEN-VAD过滤静音，保留前后100ms的静音（公开方法）
+// FilterSilenceWithVADKeepEdges sử dụng TEN-VAD để lọc khoảng lặng và giữ lại khoảng im lặng 100ms trước và sau (phương thức công khai)
 func (m *Manager) FilterSilenceWithVADKeepEdges(audioData []float32, sampleRate int) ([]float32, error) {
 	return m.filterSilenceWithVADKeepEdges(audioData, sampleRate)
 }
 
-// ExtractEmbedding 从音频数据提取声纹特征（公开方法，供外部调用）
+// ExtractEmbedding trích xuất các tính năng giọng nói từ dữ liệu âm thanh (phương thức công khai cho các cuộc gọi bên ngoài)
 func (m *Manager) ExtractEmbedding(audioData []float32, sampleRate int) ([]float32, error) {
 	return m.extractEmbedding(audioData, sampleRate)
 }
 
-// GetEmbeddingDim 获取 embedding 维度
+// GetEmbeddingDim lấy kích thước nhúng
 func (m *Manager) GetEmbeddingDim() int {
 	return m.embeddingDim
 }
 
-// RegisterSpeaker 注册声纹（支持 UID 和 Agent ID 维度隔离）
+// RegisterSpeaker đăng ký giọng nói (hỗ trợ cách ly kích thước UID và ID tác nhân)
 func (m *Manager) RegisterSpeaker(uid, agentID, speakerID, speakerName, uuid string, audioData []float32, sampleRate int) error {
 	if uid == "" {
 		return fmt.Errorf("uid is required")
@@ -399,26 +399,26 @@ func (m *Manager) RegisterSpeaker(uid, agentID, speakerID, speakerName, uuid str
 		return fmt.Errorf("uuid is required")
 	}
 
-	// 注意：音频数据应该在调用此方法之前已经过滤过静音（保留前后100ms）
-	// 提取声纹特征
+	// Lưu ý: Dữ liệu âm thanh phải được lọc và tắt tiếng trước khi gọi phương thức này (100ms trước và sau khi được giữ lại)
+	// Trích xuất các tính năng giọng nói
 	embedding, err := m.extractEmbedding(audioData, sampleRate)
 	if err != nil {
 		return fmt.Errorf("failed to extract embedding: %v", err)
 	}
 
-	// 验证嵌入向量维度
+	// Xác minh kích thước vectơ nhúng
 	if len(embedding) != m.embeddingDim {
 		return fmt.Errorf("embedding dimension mismatch: expected %d, got %d", m.embeddingDim, len(embedding))
 	}
 
-	// 查询该 speaker 已存在的样本数量（用于确定 sample_index）
+	// Truy vấn số lượng mẫu hiện có cho loa này (dùng để xác định sample_index)
 	sampleIndex, err := m.vectorDB.GetSpeakerSampleCount(uid, agentID, speakerID)
 	if err != nil {
-		// 如果查询失败，可能是 speaker 不存在，从 0 开始
+		// Nếu truy vấn không thành công, có thể loa không tồn tại và bắt đầu từ 0
 		sampleIndex = 0
 	}
 
-	// 插入到 Qdrant 向量数据库
+	// Chèn vào cơ sở dữ liệu vector Qdrant
 	now := time.Now().Unix()
 	err = m.vectorDB.Insert(uid, agentID, speakerID, speakerName, uuid, embedding, sampleIndex, now, now)
 	if err != nil {
@@ -430,26 +430,26 @@ func (m *Manager) RegisterSpeaker(uid, agentID, speakerID, speakerName, uuid str
 	return nil
 }
 
-// IdentifySpeaker 识别声纹（支持可选的 UID、agent_id、speaker_id 和 speaker_name 过滤）
-// uid: 用户ID，如果为空字符串则不作为过滤条件
-// agentID: Agent ID，如果为空字符串则不作为过滤条件
-// speakerID: 说话人ID，如果为空字符串则不作为过滤条件
-// speakerName: 说话人名称，如果为空字符串则不作为过滤条件
-// threshold: 识别阈值，如果 <= 0 则使用默认阈值
+// Xác địnhSpeaker xác định dấu giọng nói (hỗ trợ lọc UID, Agent_id, loa_id và loa_name tùy chọn)
+// uid: ID người dùng, nếu là chuỗi rỗng thì sẽ không được dùng làm điều kiện lọc
+// ID đại lý: ID đại lý. Nếu là chuỗi rỗng thì nó sẽ không được sử dụng làm điều kiện lọc.
+// loaID: ID loa, nếu là chuỗi trống thì sẽ không được dùng làm điều kiện lọc
+// loaName: tên loa, nếu là chuỗi rỗng thì sẽ không được dùng làm điều kiện lọc
+// ngưỡng: ngưỡng nhận dạng, nếu <= 0 thì sử dụng ngưỡng mặc định
 func (m *Manager) IdentifySpeaker(uid, agentID, speakerID, speakerName string, audioData []float32, sampleRate int, threshold ...float32) (*IdentifyResult, error) {
-	// 确定使用的阈值：如果传入了有效的阈值（> 0），使用传入的；否则使用默认阈值
+	// Xác định ngưỡng sẽ sử dụng: nếu ngưỡng hợp lệ (>0) được chuyển vào thì giá trị được chuyển vào sẽ được sử dụng; nếu không thì ngưỡng mặc định sẽ được sử dụng
 	useThreshold := m.threshold
 	if len(threshold) > 0 && threshold[0] > 0 {
 		useThreshold = threshold[0]
 	}
 
-	// 提取声纹特征
+	// Trích xuất các tính năng giọng nói
 	embedding, err := m.extractEmbedding(audioData, sampleRate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract embedding: %v", err)
 	}
 
-	// 在 Qdrant 向量数据库中搜索（按可选的 UID、agent_id、speaker_id 和 speaker_name 过滤，返回 top 1）
+	// Tìm kiếm trong cơ sở dữ liệu vectơ Qdrant (được lọc theo UID tùy chọn, Agent_id, loa_id và loa_name, trả về top 1)
 	results, err := m.vectorDB.SearchWithOptionalFilters(uid, agentID, speakerID, speakerName, embedding, useThreshold, 1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search in vector database: %v", err)
@@ -474,19 +474,19 @@ func (m *Manager) IdentifySpeaker(uid, agentID, speakerID, speakerName string, a
 	return result, nil
 }
 
-// VerifySpeaker 验证声纹（支持 UID 和 Agent ID 维度隔离）
+// VerifySpeaker xác minh giọng nói (hỗ trợ cách ly kích thước UID và ID tác nhân)
 func (m *Manager) VerifySpeaker(uid, agentID, speakerID string, audioData []float32, sampleRate int) (*VerifyResult, error) {
 	if uid == "" {
 		return nil, fmt.Errorf("uid is required")
 	}
 
-	// 提取声纹特征
+	// Trích xuất các tính năng giọng nói
 	embedding, err := m.extractEmbedding(audioData, sampleRate)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract embedding: %v", err)
 	}
 
-	// 在 Qdrant 中搜索该 speaker 的所有样本
+	// Tìm kiếm tất cả các mẫu cho loa này trong Qdrant
 	// Filter: uid = xxx AND agent_id = xxx AND speaker_id = xxx
 	results, err := m.vectorDB.SearchWithFilter(uid, agentID, speakerID, embedding, m.threshold, 1)
 	if err != nil {
@@ -501,7 +501,7 @@ func (m *Manager) VerifySpeaker(uid, agentID, speakerID string, audioData []floa
 		confidence = results[0].Confidence
 		speakerName = results[0].SpeakerName
 	} else {
-		// 如果未找到，尝试获取 speaker 信息（验证是否存在）
+		// Nếu không tìm thấy, hãy thử lấy thông tin người nói (xác minh nếu nó tồn tại)
 		speakerInfo, err := m.vectorDB.GetSpeakerInfo(uid, agentID, speakerID)
 		if err != nil {
 			return nil, fmt.Errorf("speaker %s not found", speakerID)
@@ -518,7 +518,7 @@ func (m *Manager) VerifySpeaker(uid, agentID, speakerID string, audioData []floa
 	}, nil
 }
 
-// GetAllSpeakers 获取指定 UID 和 Agent ID 的所有注册的说话人
+// GetAllSpeakers Nhận tất cả người phát biểu đã đăng ký cho UID và ID tác nhân được chỉ định
 func (m *Manager) GetAllSpeakers(uid, agentID string) []*SpeakerInfo {
 	speakers, err := m.vectorDB.GetAllSpeakers(uid, agentID)
 	if err != nil {
@@ -528,13 +528,13 @@ func (m *Manager) GetAllSpeakers(uid, agentID string) []*SpeakerInfo {
 	return speakers
 }
 
-// DeleteSpeaker 删除说话人（支持 UID 和 Agent ID 维度隔离）
+// DeleteSpeaker xóa loa (hỗ trợ cách ly kích thước UID và Agent ID)
 func (m *Manager) DeleteSpeaker(uid, agentID, speakerID string) error {
 	if uid == "" {
 		return fmt.Errorf("uid is required")
 	}
 
-	// 从向量数据库删除
+	// Xóa khỏi cơ sở dữ liệu vector
 	err := m.vectorDB.DeleteByFilters(uid, agentID, speakerID)
 	if err != nil {
 		return fmt.Errorf("failed to delete from vector database: %v", err)
@@ -544,7 +544,7 @@ func (m *Manager) DeleteSpeaker(uid, agentID, speakerID string) error {
 	return nil
 }
 
-// DeleteSpeakerByUUID 通过 UUID 删除说话人（支持 UID 和 Agent ID 维度隔离）
+// DeleteSpeakerByUUID xóa loa bằng UUID (hỗ trợ cách ly kích thước UID và Agent ID)
 func (m *Manager) DeleteSpeakerByUUID(uid, agentID, uuid string) error {
 	if uid == "" {
 		return fmt.Errorf("uid is required")
@@ -554,7 +554,7 @@ func (m *Manager) DeleteSpeakerByUUID(uid, agentID, uuid string) error {
 		return fmt.Errorf("uuid is required")
 	}
 
-	// 从 Qdrant 向量数据库删除
+	// Xóa khỏi cơ sở dữ liệu vectơ Qdrant
 	err := m.vectorDB.DeleteByUUID(uid, agentID, uuid)
 	if err != nil {
 		return fmt.Errorf("failed to delete from vector database: %v", err)
@@ -564,7 +564,7 @@ func (m *Manager) DeleteSpeakerByUUID(uid, agentID, uuid string) error {
 	return nil
 }
 
-// GetStats 获取统计信息（用于主服务监控，支持按 UID 和 Agent ID 过滤）
+// GetStats lấy thông tin thống kê (dùng để giám sát dịch vụ chính, hỗ trợ lọc theo UID và ID tác nhân)
 func (m *Manager) GetStats(uid, agentID string) map[string]interface{} {
 	stats := m.GetDatabaseStats(uid, agentID)
 
@@ -578,9 +578,9 @@ func (m *Manager) GetStats(uid, agentID string) map[string]interface{} {
 	}
 }
 
-// GetDatabaseStats 获取数据库统计信息（支持按 UID 和 Agent ID 过滤）
+// GetDatabaseStats Lấy số liệu thống kê cơ sở dữ liệu (hỗ trợ lọc theo UID và ID tác nhân)
 func (m *Manager) GetDatabaseStats(uid, agentID string) *DatabaseStats {
-	// 从向量数据库获取统计信息
+	// Nhận số liệu thống kê từ cơ sở dữ liệu vector
 	speakers, err := m.vectorDB.GetAllSpeakers(uid, agentID)
 	if err != nil {
 		logger.Errorf("Failed to get speakers from vector database: %v", err)
@@ -609,7 +609,7 @@ func (m *Manager) GetDatabaseStats(uid, agentID string) *DatabaseStats {
 	}
 }
 
-// 响应结构体定义
+// Định nghĩa cấu trúc phản hồi
 type IdentifyResult struct {
 	Identified  bool    `json:"identified"`
 	SpeakerID   string  `json:"speaker_id"`
@@ -645,26 +645,26 @@ type DatabaseStats struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-// StreamingIdentifier 流式声纹识别器
+// StreamingIdentifier Trình nhận dạng giọng nói trực tuyến
 type StreamingIdentifier struct {
 	manager     *Manager
-	uid         string // 用户ID，如果为空字符串则不作为过滤条件
-	agentID     string // Agent ID，如果为空字符串则不作为过滤条件
-	speakerID   string // 说话人ID，如果为空字符串则不作为过滤条件
-	speakerName string // 说话人名称，如果为空字符串则不作为过滤条件
+	uid         string // ID người dùng, nếu là chuỗi trống, nó sẽ không được sử dụng làm điều kiện lọc.
+	agentID     string // ID tác nhân, nếu là chuỗi trống, nó sẽ không được sử dụng làm điều kiện lọc.
+	speakerID   string // ID người nói. Nếu là chuỗi rỗng thì nó sẽ không được sử dụng làm điều kiện lọc.
+	speakerName string // Tên diễn giả. Nếu là chuỗi rỗng thì nó sẽ không được sử dụng làm điều kiện lọc.
 	stream      *sherpa.OnlineStream
 	sampleRate  int
-	threshold   float32 // 识别阈值，如果 <= 0 则使用默认阈值
+	threshold   float32 // Ngưỡng nhận dạng, nếu <= 0 thì sử dụng ngưỡng mặc định
 	mutex       sync.Mutex
 	isFinished  bool
 }
 
-// NewStreamingIdentifier 创建流式识别器（支持可选的 UID、agent_id、speaker_id 和 speaker_name 过滤）
-// uid: 用户ID，如果为空字符串则不作为过滤条件
-// agentID: Agent ID，如果为空字符串则不作为过滤条件
-// speakerID: 说话人ID，如果为空字符串则不作为过滤条件
-// speakerName: 说话人名称，如果为空字符串则不作为过滤条件
-// threshold: 识别阈值，如果 <= 0 则使用默认阈值
+// NewStreamingIdentifier tạo mã định danh phát trực tuyến (hỗ trợ lọc UID, Agent_id, loa_id và loa_name tùy chọn)
+// uid: ID người dùng, nếu là chuỗi rỗng thì sẽ không được dùng làm điều kiện lọc
+// ID đại lý: ID đại lý. Nếu là chuỗi rỗng thì nó sẽ không được sử dụng làm điều kiện lọc.
+// loaID: ID loa, nếu là chuỗi trống thì sẽ không được dùng làm điều kiện lọc
+// loaName: tên loa, nếu là chuỗi rỗng thì sẽ không được dùng làm điều kiện lọc
+// ngưỡng: ngưỡng nhận dạng, nếu <= 0 thì sử dụng ngưỡng mặc định
 func (m *Manager) NewStreamingIdentifier(uid, agentID, speakerID, speakerName string, sampleRate int, threshold ...float32) *StreamingIdentifier {
 	stream := m.extractor.CreateStream()
 	useThreshold := m.threshold
@@ -684,7 +684,7 @@ func (m *Manager) NewStreamingIdentifier(uid, agentID, speakerID, speakerName st
 	}
 }
 
-// AcceptAudio 接收音频数据块（流式输入）
+// AcceptAudio nhận các khối dữ liệu âm thanh (đầu vào phát trực tuyến)
 func (si *StreamingIdentifier) AcceptAudio(audioData []float32) error {
 	si.mutex.Lock()
 	defer si.mutex.Unlock()
@@ -697,12 +697,12 @@ func (si *StreamingIdentifier) AcceptAudio(audioData []float32) error {
 		return fmt.Errorf("stream is nil")
 	}
 
-	// 接受音频数据块
+	// Chấp nhận khối dữ liệu âm thanh
 	si.stream.AcceptWaveform(si.sampleRate, audioData)
 	return nil
 }
 
-// FinishAndIdentify 完成输入并识别声纹
+// FinishAndIdentify hoàn thành việc nhập và xác định giọng nói
 func (si *StreamingIdentifier) FinishAndIdentify() (*IdentifyResult, error) {
 	si.mutex.Lock()
 	defer si.mutex.Unlock()
@@ -715,37 +715,37 @@ func (si *StreamingIdentifier) FinishAndIdentify() (*IdentifyResult, error) {
 		return nil, fmt.Errorf("stream is nil")
 	}
 
-	// 标记输入完成
+	// Đánh dấu đầu vào đã hoàn thành
 	si.stream.InputFinished()
 	si.isFinished = true
 
-	// 检查是否准备就绪
+	// Kiểm tra xem nó đã sẵn sàng chưa
 	if !si.manager.extractor.IsReady(si.stream) {
 		si.cleanup()
 		return nil, fmt.Errorf("insufficient audio data for embedding extraction")
 	}
 
-	// 提取特征
+	// Trích xuất tính năng
 	embedding := si.manager.extractor.Compute(si.stream)
 	if len(embedding) == 0 {
 		si.cleanup()
 		return nil, fmt.Errorf("failed to extract embedding")
 	}
 
-	// 确定使用的阈值：如果设置了自定义阈值则使用，否则使用默认阈值
+	// Xác định ngưỡng nào sẽ sử dụng: nếu ngưỡng tùy chỉnh được đặt, hãy sử dụng ngưỡng đó, nếu không hãy sử dụng ngưỡng mặc định
 	useThreshold := si.manager.threshold
 	if si.threshold > 0 {
 		useThreshold = si.threshold
 	}
 
-	// 在 Qdrant 向量数据库中搜索（按可选的 UID、agent_id、speaker_id 和 speaker_name 过滤，返回 top 1）
+	// Tìm kiếm trong cơ sở dữ liệu vectơ Qdrant (được lọc theo UID tùy chọn, Agent_id, loa_id và loa_name, trả về top 1)
 	results, err := si.manager.vectorDB.SearchWithOptionalFilters(si.uid, si.agentID, si.speakerID, si.speakerName, embedding, useThreshold, 1)
 	if err != nil {
 		si.cleanup()
 		return nil, fmt.Errorf("failed to search in vector database: %v", err)
 	}
 
-	//记录下results
+	//Ghi lại kết quả
 	logger.Debugf("Search results: %+v", results)
 
 	result := &IdentifyResult{
@@ -764,13 +764,13 @@ func (si *StreamingIdentifier) FinishAndIdentify() (*IdentifyResult, error) {
 		result.Confidence = bestMatch.Confidence
 	}
 
-	// 清理资源
+	// Dọn dẹp tài nguyên
 	si.cleanup()
 
 	return result, nil
 }
 
-// cleanup 清理资源
+// dọn dẹp dọn dẹp tài nguyên
 func (si *StreamingIdentifier) cleanup() {
 	if si.stream != nil {
 		sherpa.DeleteOnlineStream(si.stream)
@@ -778,7 +778,7 @@ func (si *StreamingIdentifier) cleanup() {
 	}
 }
 
-// Close 关闭流式识别器并释放资源
+// Đóng đóng trình nhận dạng phát trực tuyến và giải phóng tài nguyên
 func (si *StreamingIdentifier) Close() {
 	si.mutex.Lock()
 	defer si.mutex.Unlock()

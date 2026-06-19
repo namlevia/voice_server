@@ -1,4 +1,4 @@
-// Package server 提供供主程序内嵌 asr_server 时使用的入口，避免主程序直接引用 internal 包。
+// Máy chủ gói cung cấp một điểm vào để chương trình chính nhúng asr_server nhằm ngăn chương trình chính tham chiếu trực tiếp đến gói nội bộ.
 package server
 
 import (
@@ -12,8 +12,8 @@ import (
 	"voice_server/internal/router"
 )
 
-// Setup 加载配置、初始化 asr_server 依赖并返回 HTTP Handler 与监听地址，供主进程内嵌时使用。
-// 返回: handler, addr (如 "0.0.0.0:8080"), readTimeout, error
+// Thiết lập tải cấu hình, khởi tạo phần phụ thuộc asr_server và trả về Trình xử lý HTTP cũng như địa chỉ nghe để sử dụng khi nhúng quy trình chính.
+// Trả về: trình xử lý, addr (chẳng hạn như "0.0.0.0:8080"), readTimeout, lỗi
 func Setup(configPath string) (http.Handler, string, time.Duration, error) {
 	if err := config.InitConfig(configPath); err != nil {
 		return nil, "", 0, err

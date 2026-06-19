@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HealthHandler 健康检查接口（依赖注入）
+// Giao diện kiểm tra sức khỏe HealthHandler (tiêm phụ thuộc)
 func HealthHandler(deps *bootstrap.AppDependencies) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		components := make(map[string]interface{})
@@ -28,7 +28,7 @@ func HealthHandler(deps *bootstrap.AppDependencies) gin.HandlerFunc {
 			components["rate_limit"] = map[string]interface{}{"status": "not_initialized"}
 		}
 		if deps.SpeakerManager != nil {
-			components["speaker"] = deps.SpeakerManager.GetStats("", "") // 传入空字符串获取全局统计
+			components["speaker"] = deps.SpeakerManager.GetStats("", "") // Truyền vào một chuỗi trống để lấy số liệu thống kê toàn cầu
 		} else {
 			components["speaker"] = map[string]interface{}{"status": "disabled"}
 		}

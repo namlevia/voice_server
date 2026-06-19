@@ -9,31 +9,31 @@ import (
 	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 )
 
-// VADFactory VAD工厂
+// Nhà máy VADFactory Nhà máy VAD
 type VADFactory struct {
 	factories map[string]VADPoolFactory
 }
 
-// NewVADFactory 创建新的VAD工厂
+// NewVADFactory thành lập nhà máy VAD mới
 func NewVADFactory() *VADFactory {
 	factory := &VADFactory{
 		factories: make(map[string]VADPoolFactory),
 	}
 
-	// 注册支持的VAD类型
+	// Đăng ký các loại VAD được hỗ trợ
 	factory.RegisterFactory(SILERO_TYPE, &SileroVADPoolFactory{})
 	factory.RegisterFactory(TEN_VAD_TYPE, &TenVADPoolFactory{})
 
 	return factory
 }
 
-// RegisterFactory 注册VAD池工厂
+// RegisterFactory đăng ký nhà máy sản xuất bể bơi VAD
 func (f *VADFactory) RegisterFactory(vadType string, factory VADPoolFactory) {
 	f.factories[vadType] = factory
 	logger.Infof("🔧 Registered VAD factory for type: %s", vadType)
 }
 
-// CreateVADPool 根据配置创建VAD池
+// CreateVADPool tạo nhóm VAD dựa trên cấu hình
 func (f *VADFactory) CreateVADPool() (VADPoolInterface, error) {
 	vadType := config.GlobalConfig.VAD.Provider
 
@@ -44,7 +44,7 @@ func (f *VADFactory) CreateVADPool() (VADPoolInterface, error) {
 		return nil, fmt.Errorf("unsupported VAD type: %s", vadType)
 	}
 
-	// 根据VAD类型创建配置
+	// Tạo cấu hình dựa trên loại VAD
 	var config interface{}
 	var err error
 
@@ -61,7 +61,7 @@ func (f *VADFactory) CreateVADPool() (VADPoolInterface, error) {
 		return nil, fmt.Errorf("failed to create config for %s: %v", vadType, err)
 	}
 
-	// 使用工厂创建池
+	// Tạo một hồ bơi bằng cách sử dụng một nhà máy
 	pool, err := factory.CreatePool(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create %s VAD pool: %v", vadType, err)
@@ -70,9 +70,9 @@ func (f *VADFactory) CreateVADPool() (VADPoolInterface, error) {
 	return pool, nil
 }
 
-// createSileroConfig 创建Silero VAD配置
+// createSileroConfig tạo cấu hình Silero VAD
 func (f *VADFactory) createSileroConfig() (*SileroVADConfig, error) {
-	// 创建VAD配置
+	// Tạo cấu hình VAD
 	vadConfig := &sherpa.VadModelConfig{
 		SileroVad: sherpa.SileroVadModelConfig{
 			Model:              config.GlobalConfig.VAD.SileroVAD.ModelPath,
@@ -92,26 +92,26 @@ func (f *VADFactory) createSileroConfig() (*SileroVADConfig, error) {
 		ModelConfig:       vadConfig,
 		BufferSizeSeconds: config.GlobalConfig.VAD.SileroVAD.BufferSizeSeconds,
 		PoolSize:          config.GlobalConfig.VAD.PoolSize,
-		MaxIdle:           0, // 暂时不支持MaxIdle
+		MaxIdle:           0, // MaxIdle hiện không được hỗ trợ
 	}, nil
 }
 
-// createTenVADConfig 创建TEN-VAD配置
+// createTenVADConfig tạo cấu hình TEN-VAD
 func (f *VADFactory) createTenVADConfig() (*TenVADConfig, error) {
 	return &TenVADConfig{
 		HopSize:   config.GlobalConfig.VAD.TenVAD.HopSize,
 		Threshold: config.GlobalConfig.VAD.Threshold,
 		PoolSize:  config.GlobalConfig.VAD.PoolSize,
-		MaxIdle:   0, // 暂时不支持MaxIdle
+		MaxIdle:   0, // MaxIdle hiện không được hỗ trợ
 	}, nil
 }
 
-// GetVADType 获取当前VAD类型
+// GetVADType Lấy loại VAD hiện tại
 func (f *VADFactory) GetVADType() string {
 	return config.GlobalConfig.VAD.Provider
 }
 
-// GetSupportedTypes 获取支持的VAD类型
+// GetSupportedTypes Nhận các loại VAD được hỗ trợ
 func (f *VADFactory) GetSupportedTypes() []string {
 	types := make([]string, 0, len(f.factories))
 	for vadType := range f.factories {
@@ -120,10 +120,10 @@ func (f *VADFactory) GetSupportedTypes() []string {
 	return types
 }
 
-// SileroVADPoolFactory Silero VAD池工厂
+// SileroVADPoolNhà máy sản xuất bể bơi Silero VAD
 type SileroVADPoolFactory struct{}
 
-// CreatePool 创建Silero VAD池
+// CreatePool tạo nhóm Silero VAD
 func (f *SileroVADPoolFactory) CreatePool(config interface{}) (VADPoolInterface, error) {
 	sileroConfig, ok := config.(*SileroVADConfig)
 	if !ok {
@@ -134,15 +134,15 @@ func (f *SileroVADPoolFactory) CreatePool(config interface{}) (VADPoolInterface,
 	return pool, nil
 }
 
-// GetSupportedTypes 获取支持的VAD类型
+// GetSupportedTypes Nhận các loại VAD được hỗ trợ
 func (f *SileroVADPoolFactory) GetSupportedTypes() []string {
 	return []string{SILERO_TYPE}
 }
 
-// TenVADPoolFactory TEN-VAD池工厂
+// TenVADPoolFactory Nhà máy bể bơi TEN-VAD
 type TenVADPoolFactory struct{}
 
-// CreatePool 创建TEN-VAD池
+// CreatePool tạo nhóm TEN-VAD
 func (f *TenVADPoolFactory) CreatePool(config interface{}) (VADPoolInterface, error) {
 	tenVADConfig, ok := config.(*TenVADConfig)
 	if !ok {
@@ -153,7 +153,7 @@ func (f *TenVADPoolFactory) CreatePool(config interface{}) (VADPoolInterface, er
 	return pool, nil
 }
 
-// GetSupportedTypes 获取支持的VAD类型
+// GetSupportedTypes Nhận các loại VAD được hỗ trợ
 func (f *TenVADPoolFactory) GetSupportedTypes() []string {
 	return []string{TEN_VAD_TYPE}
 }

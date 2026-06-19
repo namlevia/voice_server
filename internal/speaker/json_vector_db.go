@@ -13,8 +13,8 @@ import (
 	"voice_server/internal/logger"
 )
 
-// JSONVectorDB JSON 文件存储实现
-// 使用本地 JSON 文件存储声纹向量数据，适合小型部署
+// Triển khai lưu trữ tệp JSONVectorDB JSON
+// Sử dụng các tệp JSON cục bộ để lưu trữ dữ liệu vectơ giọng nói, phù hợp cho các hoạt động triển khai nhỏ
 type JSONVectorDB struct {
 	filePath     string
 	data         *SpeakerData
@@ -22,20 +22,20 @@ type JSONVectorDB struct {
 	embeddingDim int
 }
 
-// JSONVectorDBConfig JSON 存储配置
+// Cấu hình lưu trữ JSONVectorDBConfig JSON
 type JSONVectorDBConfig struct {
-	FilePath     string // JSON 文件路径
-	EmbeddingDim int    // 向量维度
+	FilePath     string // Đường dẫn tệp JSON
+	EmbeddingDim int    // kích thước vector
 }
 
-// SpeakerData JSON 数据结构
+// Cấu trúc dữ liệu JSON của loaData
 type SpeakerData struct {
 	Version   int64                    `json:"version"`
 	UpdatedAt int64                    `json:"updated_at"`
 	Speakers  map[string]*SpeakerEntry `json:"speakers"`
 }
 
-// SpeakerEntry 说话人条目
+// LoaMục nhập loa
 type SpeakerEntry struct {
 	UID         string       `json:"uid"`
 	AgentID     string       `json:"agent_id"`
@@ -46,7 +46,7 @@ type SpeakerEntry struct {
 	Embeddings  []*Embedding `json:"embeddings"`
 }
 
-// Embedding 向量条目
+// Nhúng mục nhập vector
 type Embedding struct {
 	UUID        string    `json:"uuid"`
 	SampleIndex int       `json:"sample_index"`
@@ -54,9 +54,9 @@ type Embedding struct {
 	CreatedAt   int64     `json:"created_at"`
 }
 
-// NewJSONVectorDB 创建 JSON 向量数据库
+// NewJSONVectorDB tạo cơ sở dữ liệu vectơ JSON
 func NewJSONVectorDB(config *JSONVectorDBConfig) (*JSONVectorDB, error) {
-	// 确保目录存在
+	// Đảm bảo thư mục tồn tại
 	dir := filepath.Dir(config.FilePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %v", err)
@@ -71,9 +71,9 @@ func NewJSONVectorDB(config *JSONVectorDBConfig) (*JSONVectorDB, error) {
 		},
 	}
 
-	// 加载现有数据
+	// Tải dữ liệu hiện có
 	if err := db.load(); err != nil {
-		// 如果文件不存在，创建空数据
+		// Nếu tệp không tồn tại, hãy tạo dữ liệu trống
 		if os.IsNotExist(err) {
 			logger.Infof("JSON vector DB file not found, creating new one: %s", config.FilePath)
 			if err := db.save(); err != nil {
@@ -87,18 +87,18 @@ func NewJSONVectorDB(config *JSONVectorDBConfig) (*JSONVectorDB, error) {
 	return db, nil
 }
 
-// Init 初始化数据库（接口实现）
+// Init khởi tạo cơ sở dữ liệu (thực hiện giao diện)
 func (db *JSONVectorDB) Init() error {
-	return nil // 已在构造函数中初始化
+	return nil // Được khởi tạo trong hàm tạo
 }
 
-// Close 关闭数据库（接口实现）
+// Đóng đóng cơ sở dữ liệu (thực hiện giao diện)
 func (db *JSONVectorDB) Close() error {
-	// 保存数据
+	// lưu dữ liệu
 	return db.save()
 }
 
-// load 从文件加载数据
+// tải tải dữ liệu từ tập tin
 func (db *JSONVectorDB) load() error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
@@ -120,14 +120,14 @@ func (db *JSONVectorDB) load() error {
 	return nil
 }
 
-// save 保存数据到文件（会加锁，供未持锁的调用方使用，如 Close、NewJSONVectorDB）
+// lưu lưu dữ liệu vào một tệp (sẽ bị khóa để sử dụng bởi những người gọi không giữ khóa, chẳng hạn như Đóng, NewJSONVectorDB)
 func (db *JSONVectorDB) save() error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	return db.saveUnlocked()
 }
 
-// saveUnlocked 仅写盘逻辑，不加锁；调用方必须已持有 db.mutex 写锁，避免死锁
+// saveUnlocked chỉ ghi logic đĩa mà không khóa; người gọi phải giữ khóa ghi db.mutex để tránh bế tắc
 func (db *JSONVectorDB) saveUnlocked() error {
 	db.data.UpdatedAt = time.Now().Unix()
 
@@ -136,7 +136,7 @@ func (db *JSONVectorDB) saveUnlocked() error {
 		return err
 	}
 
-	// 原子写入：先写到临时文件，然后重命名
+	// Ghi nguyên tử: đầu tiên ghi vào tệp tạm thời, sau đó đổi tên
 	tempPath := db.filePath + ".tmp"
 	if err := os.WriteFile(tempPath, data, 0644); err != nil {
 		return err
@@ -149,12 +149,12 @@ func (db *JSONVectorDB) saveUnlocked() error {
 	return nil
 }
 
-// generateKey 生成唯一键
+// generateKey tạo một khóa duy nhất
 func generateKey(uid, agentID, speakerID string) string {
 	return fmt.Sprintf("%s:%s:%s", uid, agentID, speakerID)
 }
 
-// Insert 插入声纹向量（接口实现）；若 uid+agentID+uuid 已存在则更新该条（uuid 相同视为同一声纹）
+// Chèn chèn vectơ giọng nói (triển khai giao diện); nếu uid+agentID+uuid đã tồn tại, hãy cập nhật mục (cùng một uuid được coi là cùng một giọng nói)
 func (db *JSONVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid string, embedding []float32, sampleIndex int, createdAt, updatedAt int64) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
@@ -175,12 +175,12 @@ func (db *JSONVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid string
 		db.data.Speakers[key] = entry
 	}
 
-	// 先按 uuid 查找：uuid 相同则更新该条
+	// Tìm kiếm đầu tiên theo uuid: nếu uuid giống nhau, hãy cập nhật mục nhập
 	for i, emb := range entry.Embeddings {
 		if emb.UUID == uuid {
 			entry.Embeddings[i] = &Embedding{
 				UUID:        uuid,
-				SampleIndex: emb.SampleIndex, // 保留原 sample_index
+				SampleIndex: emb.SampleIndex, // Giữ sample_index ban đầu
 				Vector:      embedding,
 				CreatedAt:   createdAt,
 			}
@@ -189,7 +189,7 @@ func (db *JSONVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid string
 		}
 	}
 
-	// 检查是否已存在相同 sample_index 的 embedding（覆盖旧数据）
+	// Kiểm tra xem phần nhúng có cùng sample_index đã tồn tại chưa (ghi đè dữ liệu cũ)
 	for i, emb := range entry.Embeddings {
 		if emb.SampleIndex == sampleIndex {
 			entry.Embeddings[i] = &Embedding{
@@ -203,7 +203,7 @@ func (db *JSONVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid string
 		}
 	}
 
-	// 添加新 embedding
+	// Thêm nhúng mới
 	entry.Embeddings = append(entry.Embeddings, &Embedding{
 		UUID:        uuid,
 		SampleIndex: sampleIndex,
@@ -215,17 +215,17 @@ func (db *JSONVectorDB) Insert(uid, agentID, speakerID, speakerName, uuid string
 	return db.saveToDiskAsync()
 }
 
-// saveToDiskAsync 在已持写锁时落盘，内部只调 saveUnlocked 避免重复加锁死锁
+// saveToDiskAsync được sử dụng để lưu đĩa khi khóa ghi đã được giữ. Chỉ saveUnlocked được gọi nội bộ để tránh tình trạng khóa bế tắc lặp đi lặp lại.
 func (db *JSONVectorDB) saveToDiskAsync() error {
 	return db.saveUnlocked()
 }
 
-// Search 搜索相似向量（接口实现）
+// Tìm kiếm tìm kiếm các vectơ tương tự (thực hiện giao diện)
 func (db *JSONVectorDB) Search(uid string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error) {
 	return db.SearchWithOptionalFilters(uid, "", "", "", queryEmbedding, threshold, topK)
 }
 
-// SearchWithOptionalFilters 搜索相似向量（接口实现）
+// SearchWithOptionalFilters tìm kiếm các vectơ tương tự (triển khai giao diện)
 func (db *JSONVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, speakerName string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -233,7 +233,7 @@ func (db *JSONVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, speak
 	var results []SearchResult
 
 	for _, speaker := range db.data.Speakers {
-		// 应用过滤条件
+		// Áp dụng bộ lọc
 		if uid != "" && speaker.UID != uid {
 			continue
 		}
@@ -247,7 +247,7 @@ func (db *JSONVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, speak
 			continue
 		}
 
-		// 计算每个 embedding 的相似度
+		// Tính toán độ giống nhau của mỗi lần nhúng
 		for _, emb := range speaker.Embeddings {
 			similarity := cosineSimilarity(queryEmbedding, emb.Vector)
 			if similarity >= threshold {
@@ -262,12 +262,12 @@ func (db *JSONVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, speak
 		}
 	}
 
-	// 按置信度排序
+	// Sắp xếp theo độ tin cậy
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Confidence > results[j].Confidence
 	})
 
-	// 返回 topK
+	// Trở về đầu trangK
 	if len(results) > topK && topK > 0 {
 		results = results[:topK]
 	}
@@ -275,12 +275,12 @@ func (db *JSONVectorDB) SearchWithOptionalFilters(uid, agentID, speakerID, speak
 	return results, nil
 }
 
-// SearchWithFilter 搜索相似向量（接口实现）
+// SearchWithFilter tìm kiếm các vectơ tương tự (triển khai giao diện)
 func (db *JSONVectorDB) SearchWithFilter(uid, agentID, speakerID string, queryEmbedding []float32, threshold float32, topK int) ([]SearchResult, error) {
 	return db.SearchWithOptionalFilters(uid, agentID, speakerID, "", queryEmbedding, threshold, topK)
 }
 
-// GetSpeakerSampleCount 获取说话人的样本数量（接口实现）
+// GetSpeakerSampleCount Lấy số lượng mẫu của người nói (triển khai giao diện)
 func (db *JSONVectorDB) GetSpeakerSampleCount(uid, agentID, speakerID string) (int, error) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -292,7 +292,7 @@ func (db *JSONVectorDB) GetSpeakerSampleCount(uid, agentID, speakerID string) (i
 	return 0, nil
 }
 
-// GetSpeakerInfo 获取说话人信息（接口实现）
+// GetSpeakerInfo lấy thông tin người nói (triển khai giao diện)
 func (db *JSONVectorDB) GetSpeakerInfo(uid, agentID, speakerID string) (*SpeakerInfo, error) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -312,7 +312,7 @@ func (db *JSONVectorDB) GetSpeakerInfo(uid, agentID, speakerID string) (*Speaker
 	}, nil
 }
 
-// GetAllSpeakers 获取所有说话人列表（接口实现）
+// GetAllSpeakers Lấy danh sách tất cả các diễn giả (triển khai giao diện)
 func (db *JSONVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, error) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -320,7 +320,7 @@ func (db *JSONVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, err
 	var speakers []*SpeakerInfo
 
 	for _, entry := range db.data.Speakers {
-		// 应用过滤条件
+		// Áp dụng bộ lọc
 		if uid != "" && entry.UID != uid {
 			continue
 		}
@@ -341,38 +341,38 @@ func (db *JSONVectorDB) GetAllSpeakers(uid, agentID string) ([]*SpeakerInfo, err
 	return speakers, nil
 }
 
-// DeleteByFilters 删除说话人（接口实现）
+// DeleteByFilters xóa loa (triển khai giao diện)
 func (db *JSONVectorDB) DeleteByFilters(uid, agentID, speakerID string) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	key := generateKey(uid, agentID, speakerID)
 	if _, exists := db.data.Speakers[key]; !exists {
-		return nil // 不存在也视为成功
+		return nil // Ngay cả khi nó không tồn tại, nó vẫn được coi là thành công.
 	}
 
 	delete(db.data.Speakers, key)
 	return db.saveUnlocked()
 }
 
-// DeleteByUUID 通过 UUID 删除说话人（接口实现）
+// DeleteByUUID xóa loa bằng UUID (thực hiện giao diện)
 func (db *JSONVectorDB) DeleteByUUID(uid, agentID, uuid string) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	// 查找包含该 UUID 的 speaker
+	// Tìm loa chứa UUID này
 	for key, entry := range db.data.Speakers {
 		if entry.UID != uid || (agentID != "" && entry.AgentID != agentID) {
 			continue
 		}
 
-		// 查找并删除匹配的 embedding
+		// Tìm và xóa các nội dung nhúng phù hợp
 		for i, emb := range entry.Embeddings {
 			if emb.UUID == uuid {
-				// 删除该 embedding
+				// Xóa phần nhúng
 				entry.Embeddings = append(entry.Embeddings[:i], entry.Embeddings[i+1:]...)
 
-				// 如果没有 embedding 了，删除整个 speaker
+				// Nếu không có nhúng thì xóa toàn bộ loa
 				if len(entry.Embeddings) == 0 {
 					delete(db.data.Speakers, key)
 				}
@@ -385,7 +385,7 @@ func (db *JSONVectorDB) DeleteByUUID(uid, agentID, uuid string) error {
 	return fmt.Errorf("speaker with uuid %s not found for uid %s", uuid, uid)
 }
 
-// cosineSimilarity 计算余弦相似度
+// cosineSimilarity tính toán độ tương tự cosine
 func cosineSimilarity(a, b []float32) float32 {
 	if len(a) != len(b) {
 		return 0
