@@ -16,20 +16,20 @@ import (
 )
 
 func main() {
-	fmt.Println("🔐 生成SSL证书...")
+	fmt.Println("🔐 Tạo chứng chỉ SSL...")
 
 	// Tạo thư mục ssl
 	sslDir := "../ssl"
 	if err := os.MkdirAll(sslDir, 0755); err != nil {
-		fmt.Printf("❌ 创建SSL目录失败: %v\n", err)
+		fmt.Printf("❌ Tạo thư mục SSL không thành công: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Tạo khóa riêng
-	fmt.Println("🔑 生成ECDSA私钥...")
+	fmt.Println("🔑 Tạo khóa riêng ECDSA...")
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		fmt.Printf("❌ 生成私钥失败: %v\n", err)
+		fmt.Printf("❌ Không tạo được khóa riêng: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -37,7 +37,7 @@ func main() {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		fmt.Printf("❌ 生成序列号失败: %v\n", err)
+		fmt.Printf("❌ Không tạo được số seri: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -61,10 +61,10 @@ func main() {
 	}
 
 	// Tạo chứng chỉ
-	fmt.Println("📜 生成自签名证书...")
+	fmt.Println("📜 Tạo chứng chỉ tự ký...")
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		fmt.Printf("❌ 创建证书失败: %v\n", err)
+		fmt.Printf("❌ Tạo chứng chỉ không thành công: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -72,15 +72,15 @@ func main() {
 	certPath := filepath.Join(sslDir, "cert.pem")
 	certOut, err := os.Create(certPath)
 	if err != nil {
-		fmt.Printf("❌ 创建证书文件失败: %v\n", err)
+		fmt.Printf("❌ Không tạo được file chứng chỉ: %v\n", err)
 		os.Exit(1)
 	}
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		fmt.Printf("❌ 写入证书数据失败: %v\n", err)
+		fmt.Printf("❌ Không ghi được dữ liệu chứng chỉ: %v\n", err)
 		os.Exit(1)
 	}
 	if err := certOut.Close(); err != nil {
-		fmt.Printf("❌ 关闭证书文件失败: %v\n", err)
+		fmt.Printf("❌ Đóng tệp chứng chỉ không thành công: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -88,20 +88,20 @@ func main() {
 	keyPath := filepath.Join(sslDir, "key.pem")
 	keyOut, err := os.Create(keyPath)
 	if err != nil {
-		fmt.Printf("❌ 创建私钥文件失败: %v\n", err)
+		fmt.Printf("❌ Không tạo được file khóa riêng: %v\n", err)
 		os.Exit(1)
 	}
 	privBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
 	if err != nil {
-		fmt.Printf("❌ 序列化私钥失败: %v\n", err)
+		fmt.Printf("❌ Không thể tuần tự hóa khóa riêng: %v\n", err)
 		os.Exit(1)
 	}
 	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
-		fmt.Printf("❌ 写入私钥数据失败: %v\n", err)
+		fmt.Printf("❌ Ghi dữ liệu khóa riêng không thành công: %v\n", err)
 		os.Exit(1)
 	}
 	if err := keyOut.Close(); err != nil {
-		fmt.Printf("❌ 关闭私钥文件失败: %v\n", err)
+		fmt.Printf("❌ Không đóng được file khóa riêng: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -109,15 +109,15 @@ func main() {
 	os.Chmod(keyPath, 0600)  // Khóa riêng chỉ có chủ sở hữu mới có thể đọc được
 	os.Chmod(certPath, 0644) // Chứng chỉ có thể được đọc bởi người khác
 
-	fmt.Println("✅ SSL证书生成成功!")
-	fmt.Printf("📁 证书位置: %s\n", sslDir)
-	fmt.Printf("📜 证书文件: %s\n", certPath)
-	fmt.Printf("🔑 私钥文件: %s\n", keyPath)
+	fmt.Println("✅ Chứng chỉ SSL được tạo thành công!")
+	fmt.Printf("📁 Vị trí chứng chỉ: %s\n", sslDir)
+	fmt.Printf("📜 Tệp chứng chỉ: %s\n", certPath)
+	fmt.Printf("🔑 Tệp khóa riêng: %s\n", keyPath)
 	fmt.Println("")
-	fmt.Println("⚠️  重要提示:")
-	fmt.Println("  - 这是自签名证书，浏览器会显示安全警告")
-	fmt.Println("  - 首次访问时需要手动接受证书")
-	fmt.Println("  - 证书有效期: 365天")
-	fmt.Println("  - 支持域名: localhost, *.localhost")
-	fmt.Println("  - 支持IP: 127.0.0.1, ::1")
+	fmt.Println("⚠️ LƯU Ý QUAN TRỌNG:")
+	fmt.Println("- Đây là chứng chỉ tự ký và trình duyệt sẽ hiển thị cảnh báo bảo mật")
+	fmt.Println("- Bạn cần chấp nhận chứng chỉ theo cách thủ công trong lần truy cập đầu tiên")
+	fmt.Println("- Thời hạn hiệu lực của chứng chỉ: 365 ngày")
+	fmt.Println("- Tên miền hỗ trợ: localhost, *.localhost")
+	fmt.Println("- IP hỗ trợ: 127.0.0.1, ::1")
 }
