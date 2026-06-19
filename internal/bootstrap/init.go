@@ -32,7 +32,15 @@ func createRecognizer(cfg *config.Config) (*sherpa.OfflineRecognizer, error) {
 	c.FeatConfig.SampleRate = cfg.Audio.SampleRate
 	c.FeatConfig.FeatureDim = cfg.Audio.FeatureDim
 
-	c.ModelConfig.SenseVoice.Model = cfg.Recognition.ModelPath
+	if cfg.Recognition.ModelType == "transducer" {
+		c.ModelConfig.Transducer.Encoder = cfg.Recognition.EncoderPath
+		c.ModelConfig.Transducer.Decoder = cfg.Recognition.DecoderPath
+		c.ModelConfig.Transducer.Joiner = cfg.Recognition.JoinerPath
+	} else {
+		// Default to SenseVoice if not specified or specified as sense_voice
+		c.ModelConfig.SenseVoice.Model = cfg.Recognition.ModelPath
+	}
+	
 	c.ModelConfig.Tokens = cfg.Recognition.TokensPath
 	c.ModelConfig.NumThreads = cfg.Recognition.NumThreads
 	c.ModelConfig.Debug = 0

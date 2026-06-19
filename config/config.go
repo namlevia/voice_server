@@ -29,7 +29,11 @@ type Config struct {
 	VAD         VADConfig `mapstructure:"vad"`
 	Recognition struct {
 		Enabled                     bool   `mapstructure:"enabled"`
+		ModelType                   string `mapstructure:"model_type"`
 		ModelPath                   string `mapstructure:"model_path"`
+		EncoderPath                 string `mapstructure:"encoder_path"`
+		DecoderPath                 string `mapstructure:"decoder_path"`
+		JoinerPath                  string `mapstructure:"joiner_path"`
 		TokensPath                  string `mapstructure:"tokens_path"`
 		Language                    string `mapstructure:"language"`
 		UseInverseTextNormalization bool   `mapstructure:"use_inverse_text_normalization"`
