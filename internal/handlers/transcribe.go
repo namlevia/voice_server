@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-audio/wav"
+	sherpa "github.com/k2-fsa/sherpa-onnx-go/sherpa_onnx"
 	"voice_server/internal/bootstrap"
 )
 
@@ -41,20 +42,22 @@ func TranscribeHandler(deps *bootstrap.AppDependencies) gin.HandlerFunc {
 			return
 		}
 
-		stream := deps.GlobalRecognizer.CreateStream()
-		defer deps.GlobalRecognizer.ReleaseStream(stream)
+		stream := sherpa.NewOfflineStream(deps.GlobalRecognizer)
+		defer sherpa.DeleteOfflineStream(stream)
 
-		deps.GlobalRecognizer.AcceptWaveform(stream, 16000, pcmData)
-		for deps.GlobalRecognizer.IsReady(stream) {
-			deps.GlobalRecognizer.Decode(stream)
+		stream.AcceptWaveform(16000, pcmData)
+		deps.GlobalRecognizer.Decode(stream)
+		
+		result := stream.GetResult()
+		text := ""
+		if result != nil {
+			text = result.Text
 		}
 
-		result := deps.GlobalRecognizer.GetResult(stream)
-
 		c.JSON(http.StatusOK, gin.H{
-			"text":          result,
-			"transcription": result,
-			"result":        result,
+			"text":          text,
+			"transcription": text,
+			"result":        text,
 		})
 	}
 }
