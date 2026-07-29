@@ -33,9 +33,32 @@ func createRecognizer(cfg *config.Config) (*sherpa.OfflineRecognizer, error) {
 	c.FeatConfig.FeatureDim = cfg.Audio.FeatureDim
 
 	if cfg.Recognition.ModelType == "transducer" {
-		c.ModelConfig.Transducer.Encoder = cfg.Recognition.EncoderPath
-		c.ModelConfig.Transducer.Decoder = cfg.Recognition.DecoderPath
-		c.ModelConfig.Transducer.Joiner = cfg.Recognition.JoinerPath
+		encoderPath := cfg.Recognition.EncoderPath
+		decoderPath := cfg.Recognition.DecoderPath
+		joinerPath := cfg.Recognition.JoinerPath
+
+		if _, err := os.Stat(encoderPath); os.IsNotExist(err) {
+			int8Enc := strings.TrimSuffix(encoderPath, ".onnx") + ".int8.onnx"
+			if _, statErr := os.Stat(int8Enc); statErr == nil {
+				encoderPath = int8Enc
+			}
+		}
+		if _, err := os.Stat(decoderPath); os.IsNotExist(err) {
+			int8Dec := strings.TrimSuffix(decoderPath, ".onnx") + ".int8.onnx"
+			if _, statErr := os.Stat(int8Dec); statErr == nil {
+				decoderPath = int8Dec
+			}
+		}
+		if _, err := os.Stat(joinerPath); os.IsNotExist(err) {
+			int8Join := strings.TrimSuffix(joinerPath, ".onnx") + ".int8.onnx"
+			if _, statErr := os.Stat(int8Join); statErr == nil {
+				joinerPath = int8Join
+			}
+		}
+
+		c.ModelConfig.Transducer.Encoder = encoderPath
+		c.ModelConfig.Transducer.Decoder = decoderPath
+		c.ModelConfig.Transducer.Joiner = joinerPath
 	} else {
 		// Default to SenseVoice if not specified or specified as sense_voice
 		c.ModelConfig.SenseVoice.Model = cfg.Recognition.ModelPath
