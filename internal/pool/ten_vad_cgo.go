@@ -1,15 +1,17 @@
-//go:build !android
+//go:build cgo
 
 package pool
 
 // #cgo windows,amd64 LDFLAGS: -L${SRCDIR}/../../lib/ten-vad/lib/Windows/x64 -lten_vad
 // #cgo linux,amd64   LDFLAGS: -L${SRCDIR}/../../lib/ten-vad/lib/Linux/x64 -lten_vad
 // #cgo linux,arm64   LDFLAGS: -L${SRCDIR}/../../lib/ten-vad/lib/Linux/arm64 -lten_vad
+// #cgo android,arm64 LDFLAGS: -L${SRCDIR}/../../lib/ten-vad/lib/Android/arm64-v8a -lten_vad
 // #cgo darwin,amd64  LDFLAGS: -F${SRCDIR}/../../lib/ten-vad/lib/macOS -framework ten_vad
 // #cgo darwin,arm64  LDFLAGS: -F${SRCDIR}/../../lib/ten-vad/lib/macOS -framework ten_vad
 // #cgo windows,amd64 CFLAGS:  -I${SRCDIR}/../../lib/ten-vad/include
 // #cgo linux,amd64   CFLAGS:  -I${SRCDIR}/../../lib/ten-vad/include
 // #cgo linux,arm64   CFLAGS:  -I${SRCDIR}/../../lib/ten-vad/include
+// #cgo android,arm64 CFLAGS:  -I${SRCDIR}/../../lib/ten-vad/include
 // #cgo darwin,amd64  CFLAGS:  -I${SRCDIR}/../../lib/ten-vad/include -F${SRCDIR}/../../lib/ten-vad/lib/macOS
 // #cgo darwin,arm64  CFLAGS:  -I${SRCDIR}/../../lib/ten-vad/include -F${SRCDIR}/../../lib/ten-vad/lib/macOS
 // #include "ten_vad.h"
